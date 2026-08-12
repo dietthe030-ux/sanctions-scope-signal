@@ -1,0 +1,20 @@
+{
+  "name": "sanctions-scope-signal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "test": "node --test frontend/*.test.js",
+    "check": "npm test && npm run build"
+  },
+  "dependencies": {
+    "genlayer-js": "1.1.8"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

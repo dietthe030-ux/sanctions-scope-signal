@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.vercel/
+.downloads/
+__pycache__/
+.pytest_cache/
+*.pyc
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+Thumbs.db

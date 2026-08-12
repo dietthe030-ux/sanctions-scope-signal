@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Evidence-bound, organization-only sanctions scope signals on GenLayer Studionet.">
+    <meta name="theme-color" content="#eef2fa">
+    <title>Sanctions Scope Signal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/tokens.css">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#workspace">Skip to workspace</a>
+    <header class="topbar" aria-label="Primary">
+      <a class="wordmark" href="#top" aria-label="Sanctions Scope Signal home">
+        <span class="wordmark__mark" aria-hidden="true">S</span>
+        <span>Scope Signal</span>
+      </a>
+      <button class="command-pill" id="open-command" type="button" aria-haspopup="dialog" aria-controls="command-dialog">
+        Find case <kbd>Ctrl K</kbd>
+      </button>
+      <button class="button button--quiet" id="connect-wallet" type="button">Connect wallet</button>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__copy reveal" style="--i: 0">
+          <p class="network-line"><span class="signal-dot" aria-hidden="true"></span>Studionet · chain 61999</p>
+          <h1 id="hero-title">One source. One snapshot. One bounded signal.</h1>
+          <p class="hero__lede">Screen an organization against an explicitly selected OFAC or UN publication. GenLayer validators re-fetch the evidence and agree on the consequence before state changes.</p>
+          <div class="hero__actions">
+            <a class="button button--primary" href="#workspace">Open workspace</a>
+            <a class="text-link" href="#boundary">Read the boundary</a>
+          </div>
+        </div>
+        <aside class="evidence-slab reveal" style="--i: 1" aria-label="Decision boundary">
+          <div class="evidence-slab__head">
+            <span>Decision boundary</span>
+            <span class="mono">NON-ECONOMIC</span>
+          </div>
+          <dl class="boundary-list">
+            <div><dt>Strong identifier</dt><dd>HOLD</dd></div>
+            <div><dt>Name or alias</dt><dd>ESCALATE</dd></div>
+            <div><dt>Proven complete absence</dt><dd>NO SIGNAL</dd></div>
+            <div><dt>Any evidence failure</dt><dd>UNRESOLVED</dd></div>
+          </dl>
+          <p>Absence is never inferred from an unavailable, changed, truncated, or coverage-uncertain source.</p>
+        </aside>
+      </section>
+
+      <section class="workflow" aria-labelledby="workflow-title">
+        <div class="section-head">
+          <h2 id="workflow-title">The record advances only when its evidence does.</h2>
+          <p>Draft terms remain editable. Freezing locks the source policy and snapshot label. Assessment is the first nondeterministic step.</p>
+        </div>
+        <ol class="steps">
+          <li><span>01</span><div><h3>Define</h3><p>Name one organization and choose one source policy.</p></div></li>
+          <li><span>02</span><div><h3>Bind</h3><p>Add aliases and identifiers, then freeze the snapshot label.</p></div></li>
+          <li><span>03</span><div><h3>Validate</h3><p>Independent validators fetch the source and re-derive material fields.</p></div></li>
+          <li><span>04</span><div><h3>Read back</h3><p>The client trusts only finalized execution plus authoritative contract state.</p></div></li>
+        </ol>
+      </section>
+
+      <section class="workspace" id="workspace" aria-labelledby="workspace-title">
+        <div class="workspace__rail">
+          <p class="rail-label">Case workspace</p>
+          <h2 id="workspace-title">Create or inspect a bound case.</h2>
+          <p id="wallet-state" class="state-line" aria-live="polite">Wallet not connected.</p>
+          <p id="contract-state" class="state-line">Contract address pending PRE_DEPLOY.</p>
+        </div>
+
+        <div class="workspace__main">
+          <div class="notice" id="global-notice" role="status" aria-live="polite" hidden></div>
+
+          <form class="panel" id="create-form">
+            <div class="panel__head">
+              <div><h3>New organization case</h3><p>Choose one jurisdictional publication. It cannot change after creation.</p></div>
+              <span class="stage-chip">DRAFT</span>
+            </div>
+            <label class="field">
+              <span>Legal organization name</span>
+              <input id="legal-name" name="legal-name" autocomplete="organization" minlength="3" maxlength="180" required placeholder="Ridgeline Maritime Holdings">
+            </label>
+            <label class="field">
+              <span>Official source policy</span>
+              <select id="source-policy" name="source-policy" required>
+                <option value="OFAC_SDN">OFAC SDN List</option>
+                <option value="OFAC_NON_SDN">OFAC consolidated non-SDN lists</option>
+                <option value="UN_CONSOLIDATED">UN Security Council Consolidated List</option>
+              </select>
+            </label>
+            <p class="field-note">Organization-only. Do not enter personal data. This signal is not legal advice or clearance.</p>
+            <button class="button button--primary" id="create-case" type="submit">Create case</button>
+          </form>
+
+          <article class="case-view" id="case-view" hidden>
+            <header class="case-view__head">
+              <div>
+                <p class="mono" id="case-number">CASE —</p>
+                <h3 id="case-name">No case loaded</h3>
+                <a class="source-link" id="case-source" href="#" target="_blank" rel="noreferrer">Official source</a>
+              </div>
+              <span class="stage-chip" id="case-stage">—</span>
+            </header>
+
+            <div class="case-result" id="case-result" hidden>
+              <div><span>Outcome</span><strong id="case-outcome">—</strong></div>
+              <div><span>Consequence</span><strong id="case-consequence">—</strong></div>
+              <p id="case-reason"></p>
+              <code id="case-digest"></code>
+            </div>
+
+            <div class="case-actions" id="draft-actions">
+              <form id="alias-form" class="inline-form">
+                <label class="field"><span>Add organization alias</span><input id="alias-input" maxlength="180" placeholder="Ridgeline Marine"></label>
+                <button class="button button--quiet" type="submit">Add alias</button>
+              </form>
+              <form id="identifier-form" class="inline-form">
+                <label class="field"><span>Add strong identifier</span><input id="identifier-input" maxlength="120" placeholder="Registration or listing ID"></label>
+                <button class="button button--quiet" type="submit">Add identifier</button>
+              </form>
+              <div class="term-ledger">
+                <div><h4>Aliases</h4><ul id="alias-list"></ul></div>
+                <div><h4>Identifiers</h4><ul id="identifier-list"></ul></div>
+              </div>
+              <form id="freeze-form" class="freeze-form">
+                <label class="field"><span>Snapshot label</span><input id="snapshot-label" minlength="3" maxlength="120" required placeholder="Publication observed 2026-08-13"></label>
+                <button class="button button--primary" type="submit">Freeze evidence boundary</button>
+              </form>
+            </div>
+
+            <div class="assessment-action" id="assessment-action" hidden>
+              <p>The source policy and snapshot label are frozen. Assessment may take several minutes while validators fetch and compare evidence.</p>
+              <button class="button button--primary" id="assess-case" type="button">Assess frozen case</button>
+            </div>
+
+            <form class="supersede-form" id="supersede-form" hidden>
+              <label class="field"><span>Replacement case ID</span><input id="replacement-id" inputmode="numeric" pattern="[1-9][0-9]*" required></label>
+              <button class="button button--quiet" type="submit">Link replacement</button>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <section class="boundary" id="boundary" aria-labelledby="boundary-title">
+        <h2 id="boundary-title">A scope signal, not a clearance.</h2>
+        <div class="boundary__copy">
+          <p>The contract records what a selected public snapshot supports about one organization. It does not decide legality, beneficial ownership, geographic nexus, licensing, exceptions, or the obligations of any person.</p>
+          <p>OFAC absence remains unresolved when exhaustive coverage cannot be proven. UN absence requires a complete XML document boundary. Every later source update needs a new case.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Sanctions Scope Signal</span>
+      <span>Studionet · non-economic prototype</span>
+      <a href="https://docs.genlayer.com/developers" target="_blank" rel="noreferrer">GenLayer docs</a>
+    </footer>
+
+    <dialog id="provider-dialog" aria-labelledby="provider-title">
+      <form method="dialog" class="dialog-shell">
+        <div class="dialog-head"><h2 id="provider-title">Choose a wallet provider</h2><button class="icon-button" value="cancel" aria-label="Close provider selector">×</button></div>
+        <p>Select an installed EIP-1193 provider. Scope Signal will not choose one for you.</p>
+        <div class="provider-list" id="provider-list"></div>
+      </form>
+    </dialog>
+
+    <dialog id="command-dialog" aria-labelledby="command-title">
+      <div class="dialog-shell command-shell">
+        <div class="dialog-head"><h2 id="command-title">Find a case</h2><button class="icon-button" id="close-command" type="button" aria-label="Close case finder">×</button></div>
+        <label class="field"><span>Case ID</span><input id="case-search" inputmode="numeric" pattern="[1-9][0-9]*" placeholder="Enter an on-chain case ID"></label>
+        <button class="button button--primary" id="load-case" type="button">Load case</button>
+      </div>
+    </dialog>
+
+    <script src="/config.js"></script>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
