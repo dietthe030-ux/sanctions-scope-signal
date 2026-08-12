@@ -22,7 +22,10 @@
       <button class="command-pill" id="open-command" type="button" aria-haspopup="dialog" aria-controls="command-dialog">
         Find case <kbd>Ctrl K</kbd>
       </button>
-      <button class="button button--quiet" id="connect-wallet" type="button">Connect wallet</button>
+      <div class="wallet-controls">
+        <button class="button button--quiet" id="connect-wallet" type="button">Connect wallet</button>
+        <button class="button button--quiet" id="disconnect-wallet" type="button" hidden>Disconnect</button>
+      </div>
     </header>
 
     <main id="top">
@@ -70,6 +73,7 @@
           <h2 id="workspace-title">Create or inspect a bound case.</h2>
           <p id="wallet-state" class="state-line" aria-live="polite">Wallet not connected.</p>
           <p id="contract-state" class="state-line">Contract address pending PRE_DEPLOY.</p>
+          <button class="button button--quiet" id="reconcile-write" type="button" hidden>Reconcile pending write</button>
         </div>
 
         <div class="workspace__main">

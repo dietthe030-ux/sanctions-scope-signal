@@ -1,7 +1,17 @@
 import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
 import { ExecutionResult, TransactionStatus } from "genlayer-js/types";
-import { assertFinalSuccess, extractCreatedCaseId, formatError, parseCase, shortAddress } from "./lib.js";
+import {
+  assertFinalSuccess,
+  bindProviderLifecycle,
+  createPendingWriteStore,
+  executeGuardedWrite,
+  extractCreatedCaseId,
+  formatError,
+  parseCase,
+  serializeWriteArgs,
+  shortAddress,
+} from "./lib.js";
 
 const config = window.__SSS_CONFIG__ || {};
 const contractAddress = /^0x[0-9a-fA-F]{40}$/.test(config.contractAddress || "") ? config.contractAddress : "";
@@ -13,11 +23,16 @@ const state = {
   writeClient: null,
   case: null,
   providers: new Map(),
+  detachProvider: null,
 };
+
+const pendingStore = createPendingWriteStore(window.localStorage, `sss:pending:${contractAddress || "undeployed"}`);
 
 const byId = (id) => document.getElementById(id);
 const elements = {
   connect: byId("connect-wallet"),
+  disconnect: byId("disconnect-wallet"),
+  reconcile: byId("reconcile-write"),
   providerDialog: byId("provider-dialog"),
   providerList: byId("provider-list"),
   commandDialog: byId("command-dialog"),
@@ -68,31 +83,90 @@ async function readCase(caseId) {
 
 async function finalizeWrite(functionName, args, button, readback) {
   const client = requireWriteClient();
-  setButton(button, "loading", "Waiting for finality…");
-  notice("Write submitted. Waiting for FINALIZED consensus and successful leader execution.");
+  const account = state.account;
+  const intent = { contractAddress, account, functionName, args: serializeWriteArgs(args) };
+  const existing = pendingStore.load();
+  setButton(button, "loading", existing ? "Reconciling pending…" : "Waiting for finality…");
+  notice(existing ? "Reconciling the stored transaction before any retry." : "Write intent persisted. Waiting for a transaction hash and FINALIZED consensus.");
   try {
-    const hash = await client.writeContract({
-      address: contractAddress,
-      functionName,
-      args,
-      value: 0n,
+    const result = await executeGuardedWrite({
+      store: pendingStore,
+      intent,
+      submit: () => client.writeContract({ address: contractAddress, functionName, args, value: 0n }),
+      waitForReceipt: (hash) => readClient.waitForTransactionReceipt({
+        hash,
+        status: TransactionStatus.FINALIZED,
+        interval: 4_000,
+        retries: 240,
+      }),
+      validateReceipt: assertFinalSuccess,
+      readback: (receipt, hash, pending) => readback(receipt, hash, { ...pending, account }),
+      isDefiniteNoSubmission: (error) => error?.code === 4001,
     });
-    const receipt = await readClient.waitForTransactionReceipt({
-      hash,
-      status: TransactionStatus.FINALIZED,
-      interval: 4_000,
-      retries: 240,
-    });
-    assertFinalSuccess(receipt);
-    const result = await readback(receipt, hash);
     setButton(button, "success", "Readback verified");
-    notice(`Finalized and verified. Transaction ${String(hash).slice(0, 12)}…`, "success");
+    elements.reconcile.hidden = true;
+    notice("Finalized leader execution and authoritative readback verified.", "success");
     window.setTimeout(() => setButton(button, "idle"), 2_500);
     return result;
   } catch (error) {
-    setButton(button, "error", "Write not trusted");
-    notice(`${formatError(error)} Reconcile the transaction before retrying.`, "error");
-    window.setTimeout(() => setButton(button, "idle"), 3_500);
+    const pending = pendingStore.load();
+    setButton(button, pending ? "pending" : "error", pending ? "Reconcile pending" : "Write not sent");
+    elements.reconcile.hidden = !pending;
+    notice(`${formatError(error)} ${pending ? "The persisted intent remains locked; reconcile it before retrying." : "No pending transaction was retained."}`, "error");
+    throw error;
+  }
+}
+
+async function verifyPendingReadback(receipt, _hash, pending) {
+  const args = pending.args.map((value) => value?.bigint ? BigInt(value.bigint) : value);
+  if (pending.functionName === "create_case") {
+    const caseId = extractCreatedCaseId(receipt);
+    const record = await readCase(caseId);
+    if (record.owner.toLowerCase() !== pending.account.toLowerCase() || record.legal_name !== args[0] || record.source_policy !== args[1]) {
+      throw new Error("Authoritative creation readback does not match the persisted intent.");
+    }
+    renderCase(record);
+    return record;
+  }
+  const record = await readCase(BigInt(args[0]));
+  const verified = {
+    add_alias: () => record.aliases.includes(args[1]),
+    add_identifier: () => record.identifiers.includes(args[1]),
+    freeze_case: () => record.stage === "FROZEN" && record.snapshot_label === args[1],
+    assess_case: () => ["SIGNALLED", "UNRESOLVED"].includes(record.stage),
+    supersede_case: () => record.stage === "SUPERSEDED" && BigInt(record.superseded_by) === BigInt(args[1]),
+  }[pending.functionName];
+  if (!verified || !verified()) throw new Error("Authoritative state does not match the persisted write intent.");
+  renderCase(record);
+  return record;
+}
+
+async function reconcilePendingWrite() {
+  const pending = pendingStore.load();
+  if (!pending) {
+    elements.reconcile.hidden = true;
+    return;
+  }
+  if (!state.account || pending.account.toLowerCase() !== state.account.toLowerCase()) {
+    elements.reconcile.hidden = false;
+    throw new Error(`Reconnect ${shortAddress(pending.account)} to reconcile its pending write.`);
+  }
+  setButton(elements.reconcile, "loading", "Reconciling…");
+  try {
+    await executeGuardedWrite({
+      store: pendingStore,
+      intent: pending,
+      submit: () => { throw new Error("A persisted write must never be resubmitted."); },
+      waitForReceipt: (hash) => readClient.waitForTransactionReceipt({ hash, status: TransactionStatus.FINALIZED, interval: 4_000, retries: 240 }),
+      validateReceipt: assertFinalSuccess,
+      readback: verifyPendingReadback,
+    });
+    elements.reconcile.hidden = true;
+    setButton(elements.reconcile, "success", "Reconciled");
+    notice("Stored transaction finalized successfully and its contract state was verified.", "success");
+  } catch (error) {
+    setButton(elements.reconcile, "pending", "Reconcile pending write");
+    notice(formatError(error), "error");
     throw error;
   }
 }
@@ -181,6 +255,21 @@ function renderProviderList() {
   }
 }
 
+function detachProviderHandlers() {
+  state.detachProvider?.();
+  state.detachProvider = null;
+}
+
+function invalidateWallet(message) {
+  detachProviderHandlers();
+  state.provider = null;
+  state.account = "";
+  state.writeClient = null;
+  elements.connect.textContent = "Connect wallet";
+  elements.disconnect.hidden = true;
+  elements.walletState.textContent = message || "Wallet disconnected locally.";
+}
+
 async function connectProvider(provider, info) {
   notice(`Requesting access from ${info?.name || "the selected wallet"}…`);
   try {
@@ -189,19 +278,21 @@ async function connectProvider(provider, info) {
     const account = accounts[0];
     const client = createClient({ chain: studionet, account, provider });
     await client.connect("studionet");
+    detachProviderHandlers();
     state.provider = provider;
     state.account = account;
     state.writeClient = client;
-    elements.connect.textContent = shortAddress(account);
+    elements.connect.textContent = "Switch wallet";
+    elements.disconnect.hidden = false;
     elements.walletState.textContent = `Connected ${shortAddress(account)} through ${info?.name || "selected provider"}.`;
     elements.providerDialog.close();
     notice("Wallet connected to Studionet. No write has been sent.", "success");
-    provider.on?.("accountsChanged", (next) => {
-      if (!next?.[0]) window.location.reload();
-      state.account = next[0];
-      elements.connect.textContent = shortAddress(next[0]);
-      elements.walletState.textContent = `Connected ${shortAddress(next[0])}. Reload before a write if the account changed mid-case.`;
-    });
+    state.detachProvider = bindProviderLifecycle(provider, (reason) => invalidateWallet({
+      accountsChanged: "Wallet account changed. Reconnect through the provider selector before any write.",
+      chainChanged: "Wallet network changed. Reconnect and confirm Studionet before any write.",
+      disconnect: "Wallet provider disconnected. Reconnect before any write.",
+    }[reason]));
+    if (pendingStore.load()) await reconcilePendingWrite();
   } catch (error) {
     notice(`${formatError(error)} Choose a provider again or approve the Studionet switch.`, "error");
   }
@@ -214,6 +305,11 @@ elements.connect.addEventListener("click", () => {
 });
 
 window.addEventListener("eip6963:announceProvider", (event) => registerProvider(event.detail.info, event.detail.provider));
+elements.disconnect.addEventListener("click", () => {
+  invalidateWallet("Wallet disconnected locally. Any persisted transaction remains available for later reconciliation.");
+  notice("Local wallet session cleared. No provider account was selected automatically.", "success");
+});
+elements.reconcile.addEventListener("click", () => reconcilePendingWrite().catch(() => {}));
 
 elements.commandOpen.addEventListener("click", () => {
   elements.commandDialog.showModal();
@@ -248,10 +344,10 @@ elements.createForm.addEventListener("submit", async (event) => {
   const legalName = byId("legal-name").value.trim();
   const policy = byId("source-policy").value;
   try {
-    await finalizeWrite("create_case", [legalName, policy], button, async (receipt) => {
+    await finalizeWrite("create_case", [legalName, policy], button, async (receipt, _hash, intent) => {
       const caseId = extractCreatedCaseId(receipt);
       const record = await readCase(caseId);
-      if (record.owner.toLowerCase() !== state.account.toLowerCase() || record.legal_name !== legalName || record.source_policy !== policy) {
+      if (record.owner.toLowerCase() !== intent.account.toLowerCase() || record.legal_name !== legalName || record.source_policy !== policy) {
         throw new Error("Authoritative readback does not match the signed creation intent.");
       }
       renderCase(record);
@@ -330,6 +426,14 @@ elements.supersedeForm.addEventListener("submit", async (event) => {
 
 if (contractAddress) {
   elements.contractState.textContent = `Contract ${shortAddress(contractAddress)} · Studionet.`;
+  try {
+    const pending = pendingStore.load();
+    elements.reconcile.hidden = !pending;
+    if (pending) notice(`A persisted ${pending.functionName} transaction must be reconciled before any new write.`, "info");
+  } catch (error) {
+    elements.reconcile.hidden = false;
+    notice(formatError(error), "error");
+  }
 } else {
   document.querySelectorAll("button[type='submit'], #assess-case, #load-case").forEach((button) => {
     if (button.id !== "load-case") button.disabled = true;

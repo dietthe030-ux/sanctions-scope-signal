@@ -56,3 +56,17 @@ before any upgrade.
 If Studionet state resets, the old address and state cannot be recovered. Redeploy from the recorded
 source commit, rerun the proof matrix, and update the frontend address. Never represent an old address as
 surviving a network reset.
+
+## Frontend transaction recovery
+
+Before submission, the frontend persists the account, contract, function, exact arguments, and intent.
+Once returned, the transaction hash is added to the same local record. A timeout, reload, provider event,
+or delayed readback leaves that record locked: the frontend reconciles the original hash and never emits a
+replacement transaction automatically. It clears the record only after `FINALIZED`,
+`FINISHED_WITH_RETURN`, and function-specific authoritative readback all succeed. A wallet rejection with
+EIP-1193 code `4001` is the only automatically recognized pre-submission failure.
+
+If a provider reports `accountsChanged`, `chainChanged`, or `disconnect`, the write client is discarded.
+Reconnect the original account through the explicit provider selector to reconcile its stored transaction.
+If the stored intent has no hash because the provider outcome was ambiguous, do not retry: inspect wallet
+activity/RPC state and reconcile manually before clearing local browser storage.

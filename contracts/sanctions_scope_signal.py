@@ -361,6 +361,10 @@ reason: a source-grounded explanation, at most 900 characters
         self._require_owner(replacement)
         if replacement_case_id == case_id:
             raise gl.vm.UserError("A case cannot supersede itself")
+        if replacement_case_id < case_id:
+            raise gl.vm.UserError("A replacement must be a newer case")
+        if replacement["stage"] not in ("SIGNALLED", "UNRESOLVED"):
+            raise gl.vm.UserError("A replacement must be assessed and current")
         case["stage"] = "SUPERSEDED"
         case["superseded_by"] = replacement_case_id
         self._save(case_id, case)

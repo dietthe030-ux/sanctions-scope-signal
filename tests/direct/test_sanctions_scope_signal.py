@@ -238,10 +238,66 @@ def test_supersede_links_exact_replacement(direct_vm, direct_deploy):
     contract.assess_case(first)
 
     second = make_case(contract)
+    contract.freeze_case(second, "Snapshot two")
+    contract.assess_case(second)
     contract.supersede_case(first, second)
     updated = read_case(contract, first)
     assert updated["stage"] == "SUPERSEDED"
     assert updated["superseded_by"] == second
+
+
+def test_supersede_rejects_unassessed_older_and_already_superseded_replacements(direct_vm, direct_deploy):
+    direct_vm.mock_web(
+        r"PublicationPreview/exports/SDN\.CSV",
+        {"status": 503, "body": "temporarily unavailable"},
+    )
+    contract = direct_deploy(CONTRACT)
+    older = make_case(contract, name="Older Organization")
+    contract.freeze_case(older, "Older snapshot")
+    contract.assess_case(older)
+    current = make_case(contract, name="Current Organization")
+    contract.freeze_case(current, "Current snapshot")
+    contract.assess_case(current)
+    draft = make_case(contract, name="Draft Organization")
+
+    with direct_vm.expect_revert("newer case"):
+        contract.supersede_case(current, older)
+    with direct_vm.expect_revert("assessed and current"):
+        contract.supersede_case(older, draft)
+
+    replacement = make_case(contract, name="Replacement Organization")
+    contract.freeze_case(replacement, "Replacement snapshot")
+    contract.assess_case(replacement)
+    newest = make_case(contract, name="Newest Organization")
+    contract.freeze_case(newest, "Newest snapshot")
+    contract.assess_case(newest)
+    contract.supersede_case(replacement, newest)
+    with direct_vm.expect_revert("newer case"):
+        contract.supersede_case(current, older)
+    with direct_vm.expect_revert("assessed and current"):
+        contract.supersede_case(current, replacement)
+
+
+def test_supersede_rejects_self_and_cross_owner(direct_vm, direct_deploy, direct_bob):
+    direct_vm.mock_web(
+        r"PublicationPreview/exports/SDN\.CSV",
+        {"status": 503, "body": "temporarily unavailable"},
+    )
+    contract = direct_deploy(CONTRACT)
+    owner = direct_vm.sender
+    first = make_case(contract)
+    contract.freeze_case(first, "First snapshot")
+    contract.assess_case(first)
+    with direct_vm.expect_revert("itself"):
+        contract.supersede_case(first, first)
+
+    direct_vm.sender = direct_bob
+    other = make_case(contract, name="Other Owner Organization")
+    contract.freeze_case(other, "Other snapshot")
+    contract.assess_case(other)
+    direct_vm.sender = owner
+    with direct_vm.expect_revert("Only the case owner"):
+        contract.supersede_case(first, other)
 
 
 @pytest.mark.parametrize("policy", ["OFAC_SDN", "OFAC_NON_SDN", "UN_CONSOLIDATED"])
