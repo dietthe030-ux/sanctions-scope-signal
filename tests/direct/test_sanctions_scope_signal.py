@@ -120,6 +120,38 @@ def test_alias_only_match_cannot_hold(direct_vm, direct_deploy):
     assert case["consequence"] == "ESCALATE"
 
 
+def test_name_and_identifier_in_different_ofac_records_cannot_hold(direct_vm, direct_deploy):
+    direct_vm.mock_web(
+        r"PublicationPreview/exports/SDN\.CSV",
+        {
+            "status": 200,
+            "body": (
+                "9911,Northwind Export Cooperative,Entity,OTHER-IDENTIFIER,SDN\n"
+                "9912,Different Maritime Group,Entity,REG-884201,SDN\n"
+                + "context,record\n" * 8
+            ),
+        },
+    )
+    direct_vm.mock_llm(
+        r"organization-only sanctions screening signal",
+        {
+            "outcome": "CONFIRMED_IDENTIFIER_MATCH",
+            "consequence": "HOLD",
+            "matched_record": "Incorrect merged record",
+            "reason": "The model incorrectly linked adjacent rows.",
+        },
+    )
+    contract = direct_deploy(CONTRACT)
+    case_id = make_case(contract)
+    contract.add_identifier(case_id, "REG-884201")
+    contract.freeze_case(case_id, "OFAC cross-record fixture")
+    contract.assess_case(case_id)
+
+    case = read_case(contract, case_id)
+    assert case["outcome"] == "UNRESOLVED"
+    assert case["consequence"] == "UNRESOLVED"
+
+
 def test_malformed_model_response_fails_closed(direct_vm, direct_deploy):
     direct_vm.strict_mocks = True
     direct_vm.mock_web(

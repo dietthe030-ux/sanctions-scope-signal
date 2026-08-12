@@ -37,6 +37,22 @@ def _contains_term(normalized_document: str, term: str) -> bool:
     return f" {normalized_term} " in f" {normalized_document} "
 
 
+def _normalize_document(value: str) -> str:
+    # Preserve source record boundaries so evidence windows cannot merge adjacent CSV rows.
+    return " record_boundary ".join(_normalize(line) for line in value.splitlines())
+
+
+def _has_linked_ofac_record(body: str, identifiers: list[str], names: list[str]) -> bool:
+    for line in body.splitlines():
+        normalized_line = _normalize(line)
+        if (
+            any(_contains_term(normalized_line, identifier) for identifier in identifiers)
+            and any(_contains_term(normalized_line, name) for name in names)
+        ):
+            return True
+    return False
+
+
 def _evidence_windows(normalized_document: str, terms: list[str]) -> list[str]:
     windows = []
     padded = f" {normalized_document} "
@@ -221,7 +237,7 @@ class SanctionsScopeSignal(gl.Contract):
                     "reason": "The official source response was unavailable or too short.",
                 })
 
-            normalized_document = _normalize(body)
+            normalized_document = _normalize_document(body)
             identifier_hits = [item for item in identifiers if _contains_term(normalized_document, item)]
             name_terms = [legal_name] + aliases
             name_hits = [item for item in name_terms if _contains_term(normalized_document, item)]
@@ -257,6 +273,7 @@ Identifiers: {identifiers}
 Identifiers found literally: {identifier_hits}
 Names or aliases found literally: {name_hits}
 Normalized evidence windows: {windows}
+The token record_boundary marks a source line boundary. Never link facts across that marker.
 
 Rules:
 1. CONFIRMED_IDENTIFIER_MATCH only when a supplied identifier is visibly linked to the same listed organization record. Consequence HOLD.
@@ -295,6 +312,12 @@ reason: a source-grounded explanation, at most 900 characters
             if model_result["consequence"] != allowed[outcome]:
                 outcome = "UNRESOLVED"
             if outcome == "CONFIRMED_IDENTIFIER_MATCH" and not identifier_hits:
+                outcome = "UNRESOLVED"
+            if (
+                outcome == "CONFIRMED_IDENTIFIER_MATCH"
+                and policy in ("OFAC_SDN", "OFAC_NON_SDN")
+                and not _has_linked_ofac_record(body, identifier_hits, name_hits)
+            ):
                 outcome = "UNRESOLVED"
             if outcome == "PROBABLE_ALIAS_MATCH" and not name_hits:
                 outcome = "UNRESOLVED"
