@@ -32,12 +32,12 @@ Results on the release candidate:
 - GenVM AST and SDK semantic validation: pass; 11 public methods.
 - GenVM schema extraction: pass; 4 view and 7 write methods.
 - Python: 20 passed.
-- Frontend: 14 passed, including duplicate-provider, non-MetaMask Studionet connection, reload-required reconnection, receipt-envelope reconciliation, and automatic editable snapshot-label regressions.
+- Frontend: 15 passed, including duplicate-provider, non-MetaMask Studionet connection, reload-required reconnection, rollback/error/malformed receipt locking, and automatic editable snapshot-label regressions.
 - Production build: passed with the exact contract address above.
 
 ## Live proof matrix
 
-All writes ran in Normal consensus and were submitted only after the preceding transaction reached `FINALIZED`.
+The primary deployment and all application business writes ran in Normal consensus and were submitted only after the preceding transaction reached `FINALIZED`. The separate platform-level upgrade rehearsal reports `execution_mode: NORMAL` together with the legacy RPC field `leader_only: true` and no validator consensus receipts, so it is recorded only as authorization/source/storage recovery evidence—not as a Full Consensus business call.
 
 | Path | Transaction | Verified result |
 | --- | --- | --- |

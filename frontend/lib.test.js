@@ -40,12 +40,26 @@ test("accepts named and numeric FINALIZED successful execution only", () => {
   assert.doesNotThrow(() => assertFinalSuccess({ statusName: "FINALIZED", txExecutionResultName: "FINISHED_WITH_RETURN" }));
   assert.doesNotThrow(() => assertFinalSuccess({ status: 7, txExecutionResult: 1 }));
   assert.doesNotThrow(() => assertFinalSuccess({ status_name: "FINALIZED", tx_execution_result: "1" }));
-  assert.doesNotThrow(() => assertFinalSuccess({ status: 7, consensus_data: { leader_receipt: [{ error: null, result: "2" }] } }));
+  assert.doesNotThrow(() => assertFinalSuccess({
+    status: 7,
+    consensus_data: { leader_receipt: [{ result: { status: "return", payload: { readable: "2" } } }] },
+  }));
   assert.throws(() => assertFinalSuccess({ statusName: "ACCEPTED", txExecutionResultName: "FINISHED_WITH_RETURN" }), /FINALIZED/);
   assert.throws(() => assertFinalSuccess({ statusName: "FINALIZED", txExecutionResultName: "FINISHED_WITH_ERROR" }), /no state change/);
   assert.throws(() => assertFinalSuccess({ statusName: "ACCEPTED", status: 7, txExecutionResult: 1 }), /FINALIZED/);
   assert.throws(() => assertFinalSuccess({ status: 7 }), /no state change/);
   assert.throws(() => assertFinalSuccess({ status: 7, consensus_data: { leader_receipt: [{ error: "reverted", result: null }] } }), /no state change/);
+  for (const result of [
+    { status: "rollback", payload: { readable: "2" } },
+    { status: "contract_error", payload: "failure" },
+    { status: "return" },
+  ]) {
+    assert.throws(() => assertFinalSuccess({ status: 7, consensus_data: { leader_receipt: [{ result }] } }), /no state change/);
+  }
+  assert.throws(() => assertFinalSuccess({
+    status: 7,
+    consensus_data: { validators: [{ result: { status: "return", payload: { readable: "2" } } }] },
+  }), /no state change/);
   assert.throws(() => assertFinalSuccess({
     status: 7,
     txExecutionResult: 2,
@@ -192,6 +206,30 @@ test("keeps failed-final and delayed-readback writes locked", async () => {
       validateReceipt: assertFinalSuccess,
       readback: async () => { throw new Error("readback unavailable"); },
     }));
+    assert.equal(store.load().hash, "0xhash");
+  }
+});
+
+test("keeps rollback, error, malformed, and validator-only receipts locked", async () => {
+  const receipts = [
+    { status: 7, consensus_data: { leader_receipt: [{ result: { status: "rollback", payload: { readable: "1" } } }] } },
+    { status: 7, consensus_data: { leader_receipt: [{ result: { status: "contract_error", payload: "failure" } }] } },
+    { status: 7, consensus_data: { leader_receipt: [{ result: { status: "return" } }] } },
+    { status: 7, consensus_data: { leader_receipt: [{}] } },
+    { status: 7, consensus_data: { validators: [{ result: { status: "return", payload: { readable: "1" } } }] } },
+  ];
+  for (const [index, receipt] of receipts.entries()) {
+    const store = createPendingWriteStore(memoryStorage(), `unsafe-receipt-${index}`);
+    let readbacks = 0;
+    await assert.rejects(() => executeGuardedWrite({
+      store,
+      intent: { contractAddress: "0xabc", account: "0xowner", functionName: "freeze_case", args: [1, "Snapshot"] },
+      submit: async () => "0xhash",
+      waitForReceipt: async () => receipt,
+      validateReceipt: assertFinalSuccess,
+      readback: async () => { readbacks += 1; },
+    }), /no state change/);
+    assert.equal(readbacks, 0);
     assert.equal(store.load().hash, "0xhash");
   }
 });

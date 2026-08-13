@@ -94,12 +94,18 @@ export function assertFinalSuccess(receipt) {
     throw new Error(`Transaction stopped at ${statuses.join("/") || "UNKNOWN"}; FINALIZED is required.`);
   }
   const leaderReceipts = receipt?.consensus_data?.leader_receipt;
-  const successfulLeader = Array.isArray(leaderReceipts) && leaderReceipts.some((leader) => (
+  const successfulLeader = Array.isArray(leaderReceipts) && leaderReceipts.length > 0 && leaderReceipts.every((leader) => (
     leader && typeof leader === "object"
     && leader.error == null
-    && Object.hasOwn(leader, "result")
+    && leader.result && typeof leader.result === "object"
+    && leader.result.status === "return"
+    && Object.hasOwn(leader.result, "payload")
   ));
-  if (executions.some((execution) => execution !== SUCCESS_RESULT) || (!executions.length && !successfulLeader)) {
+  const conflictingLeader = Array.isArray(leaderReceipts) && leaderReceipts.some((leader) => (
+    leader?.error != null
+    || (leader?.result && typeof leader.result === "object" && leader.result.status !== "return")
+  ));
+  if (conflictingLeader || executions.some((execution) => execution !== SUCCESS_RESULT) || (!executions.length && !successfulLeader)) {
     throw new Error(`Leader execution is ${executions.join("/") || "UNKNOWN"}; no state change is trusted.`);
   }
   return receipt;
