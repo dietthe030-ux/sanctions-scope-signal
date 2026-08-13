@@ -5,10 +5,12 @@ import {
   assertFinalSuccess,
   bindProviderLifecycle,
   createPendingWriteStore,
+  ensureWalletChain,
   executeGuardedWrite,
   extractCreatedCaseId,
   formatError,
   parseCase,
+  registerWalletProvider,
   serializeWriteArgs,
   shortAddress,
 } from "./lib.js";
@@ -220,8 +222,7 @@ async function loadAndRender(caseId) {
 }
 
 function registerProvider(info, provider) {
-  const key = info?.uuid || info?.rdns || info?.name || `provider-${state.providers.size + 1}`;
-  if (!state.providers.has(key)) state.providers.set(key, { info: info || { name: "Injected wallet" }, provider });
+  registerWalletProvider(state.providers, info, provider);
 }
 
 function discoverProviders() {
@@ -276,8 +277,8 @@ async function connectProvider(provider, info) {
     const accounts = await provider.request({ method: "eth_requestAccounts" });
     if (!Array.isArray(accounts) || !accounts[0]) throw new Error("The selected wallet returned no account.");
     const account = accounts[0];
+    await ensureWalletChain(provider, studionet);
     const client = createClient({ chain: studionet, account, provider });
-    await client.connect("studionet");
     detachProviderHandlers();
     state.provider = provider;
     state.account = account;

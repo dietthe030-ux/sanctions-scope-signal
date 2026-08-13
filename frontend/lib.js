@@ -3,12 +3,70 @@ export const SUCCESS_RESULT = "FINISHED_WITH_RETURN";
 
 export function formatError(error) {
   if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object" && typeof error.message === "string") return error.message;
   if (typeof error === "string") return error;
   try {
     return JSON.stringify(error, (_, value) => typeof value === "bigint" ? value.toString() : value);
   } catch {
     return "The operation failed without a readable error.";
   }
+}
+
+export function walletProviderAliases(info = {}) {
+  const aliases = [info.rdns, info.name]
+    .filter((value) => typeof value === "string" && value.trim())
+    .map((value) => value.trim().toLowerCase());
+  return [...new Set(aliases)];
+}
+
+export function registerWalletProvider(providers, info, provider) {
+  const normalizedInfo = info || { name: "Injected wallet" };
+  const aliases = walletProviderAliases(normalizedInfo);
+  for (const [key, existing] of providers) {
+    if (existing.provider === provider || aliases.some((alias) => existing.aliases.includes(alias))) {
+      if (!existing.info?.rdns && normalizedInfo.rdns) providers.set(key, { info: normalizedInfo, provider, aliases });
+      return;
+    }
+  }
+  const key = aliases[0] || normalizedInfo.uuid || `provider-${providers.size + 1}`;
+  providers.set(key, { info: normalizedInfo, provider, aliases });
+}
+
+function providerErrorCode(error) {
+  return Number(error?.code ?? error?.data?.originalError?.code);
+}
+
+export async function ensureWalletChain(provider, chain) {
+  const chainId = `0x${chain.id.toString(16)}`;
+  const verify = async () => {
+    const actual = String(await provider.request({ method: "eth_chainId" })).toLowerCase();
+    if (actual !== chainId) throw new Error(`Wallet remained on chain ${actual}; Studionet ${chainId} is required.`);
+  };
+  const current = await provider.request({ method: "eth_chainId" });
+  if (String(current).toLowerCase() === chainId) return;
+
+  try {
+    await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId }] });
+    await verify();
+    return;
+  } catch (error) {
+    const message = String(error?.message || "");
+    const missingChain = providerErrorCode(error) === 4902 || /unknown|unrecognized|not added/i.test(message);
+    if (!missingChain) throw error;
+  }
+
+  await provider.request({
+    method: "wallet_addEthereumChain",
+    params: [{
+      chainId,
+      chainName: chain.name,
+      rpcUrls: chain.rpcUrls.default.http,
+      nativeCurrency: chain.nativeCurrency,
+      blockExplorerUrls: Object.values(chain.blockExplorers || {}).map(({ url }) => url).filter(Boolean),
+    }],
+  });
+  await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId }] });
+  await verify();
 }
 
 export function assertFinalSuccess(receipt) {

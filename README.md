@@ -83,7 +83,7 @@ $env:VITE_CONTRACT_ADDRESS='0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26'
 npm run build
 ```
 
-Current release evidence: GenVM semantic/schema checks pass; Python `20/20`; frontend `9/9`; production build passes. See [verification](docs/VERIFICATION.md).
+Current release evidence: GenVM semantic/schema checks pass for the unchanged deployed contract; Python `20/20`; frontend `12/12`; production build passes. The wallet regressions cover EIP-6963/legacy deduplication and provider-native Studionet switch/add/readback without MetaMask Snap APIs. See [verification](docs/VERIFICATION.md).
 
 ## Deployment
 

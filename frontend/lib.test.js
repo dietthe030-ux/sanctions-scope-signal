@@ -4,11 +4,14 @@ import {
   assertFinalSuccess,
   bindProviderLifecycle,
   createPendingWriteStore,
+  ensureWalletChain,
   executeGuardedWrite,
   extractCreatedCaseId,
   formatError,
   parseCase,
+  registerWalletProvider,
   serializeWriteArgs,
+  walletProviderAliases,
 } from "./lib.js";
 
 function memoryStorage() {
@@ -48,6 +51,69 @@ test("rejects malformed contract readback", () => {
 
 test("error formatting is bigint-safe", () => {
   assert.match(formatError({ amount: 2n ** 60n }), /1152921504606846976/);
+  assert.equal(formatError({ code: -32601, message: "Method not found" }), "Method not found");
+});
+
+test("deduplicates provider identities by normalized rdns or name", () => {
+  assert.deepEqual(walletProviderAliases({ rdns: "IO.MetaMask", name: " MetaMask " }), ["io.metamask", "metamask"]);
+  assert.deepEqual(walletProviderAliases({ name: "MetaMask" }), ["metamask"]);
+  const providers = new Map();
+  registerWalletProvider(providers, { rdns: "io.metamask", name: "MetaMask" }, { source: "eip6963" });
+  registerWalletProvider(providers, { name: "MetaMask" }, { source: "legacy" });
+  assert.equal(providers.size, 1);
+  assert.equal([...providers.values()][0].provider.source, "eip6963");
+});
+
+test("switches the selected provider without invoking wallet_getSnaps", async () => {
+  const calls = [];
+  let currentChain = "0x1";
+  const provider = {
+    request: async ({ method, params }) => {
+      calls.push([method, params]);
+      if (method === "eth_chainId") return currentChain;
+      if (method === "wallet_switchEthereumChain") currentChain = params[0].chainId;
+      return null;
+    },
+  };
+  await ensureWalletChain(provider, {
+    id: 61999,
+    name: "Genlayer Studio Network",
+    rpcUrls: { default: { http: ["https://studio.genlayer.com/api"] } },
+    nativeCurrency: { name: "GEN Token", symbol: "GEN", decimals: 18 },
+    blockExplorers: {},
+  });
+  assert.deepEqual(calls.map(([method]) => method), ["eth_chainId", "wallet_switchEthereumChain", "eth_chainId"]);
+});
+
+test("adds Studionet only when the selected provider reports an unknown chain", async () => {
+  const calls = [];
+  let switchAttempts = 0;
+  let currentChain = "0x1";
+  const provider = {
+    request: async ({ method, params }) => {
+      calls.push([method, params]);
+      if (method === "eth_chainId") return currentChain;
+      if (method === "wallet_switchEthereumChain" && switchAttempts++ === 0) {
+        throw Object.assign(new Error("Unknown chain"), { code: 4902 });
+      }
+      if (method === "wallet_switchEthereumChain") currentChain = params[0].chainId;
+      return null;
+    },
+  };
+  await ensureWalletChain(provider, {
+    id: 61999,
+    name: "Genlayer Studio Network",
+    rpcUrls: { default: { http: ["https://studio.genlayer.com/api"] } },
+    nativeCurrency: { name: "GEN Token", symbol: "GEN", decimals: 18 },
+    blockExplorers: { default: { url: "https://explorer-studio.genlayer.com" } },
+  });
+  assert.deepEqual(calls.map(([method]) => method), [
+    "eth_chainId",
+    "wallet_switchEthereumChain",
+    "wallet_addEthereumChain",
+    "wallet_switchEthereumChain",
+    "eth_chainId",
+  ]);
 });
 
 test("persists intent and hash across timeout, then reconciles without replay", async () => {
