@@ -5,6 +5,7 @@ import {
   assertFinalSuccess,
   bindProviderLifecycle,
   createPendingWriteStore,
+  defaultSnapshotLabel,
   ensureWalletChain,
   executeGuardedWrite,
   extractCreatedCaseId,
@@ -14,6 +15,10 @@ import {
   serializeWriteArgs,
   walletProviderAliases,
 } from "./lib.js";
+
+test("prefills an editable snapshot label from the browser-local date", () => {
+  assert.equal(defaultSnapshotLabel(new Date(2026, 7, 13)), "Publication observed 2026-08-13");
+});
 
 function memoryStorage() {
   const values = new Map();

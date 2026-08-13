@@ -5,6 +5,7 @@ import {
   assertFinalSuccess,
   bindProviderLifecycle,
   createPendingWriteStore,
+  defaultSnapshotLabel,
   ensureWalletChain,
   executeGuardedWrite,
   extractCreatedCaseId,
@@ -53,6 +54,8 @@ const elements = {
   assess: byId("assess-case"),
   supersedeForm: byId("supersede-form"),
 };
+
+byId("snapshot-label").value = defaultSnapshotLabel();
 
 function notice(message, tone = "info") {
   elements.notice.hidden = !message;

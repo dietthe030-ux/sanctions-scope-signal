@@ -3,6 +3,13 @@ export const SUCCESS_RESULT = "FINISHED_WITH_RETURN";
 const FINAL_STATUS_CODE = 7;
 const SUCCESS_RESULT_CODE = 1;
 
+export function defaultSnapshotLabel(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `Publication observed ${year}-${month}-${day}`;
+}
+
 export function formatError(error) {
   if (error instanceof Error && error.message) return error.message;
   if (error && typeof error === "object" && typeof error.message === "string") return error.message;
