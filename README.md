@@ -83,7 +83,7 @@ $env:VITE_CONTRACT_ADDRESS='0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26'
 npm run build
 ```
 
-Current release evidence: GenVM semantic/schema checks pass for the unchanged deployed contract; Python `20/20`; frontend `14/14`; production build passes. The wallet regressions cover EIP-6963/legacy deduplication, provider-native Studionet switch/add/readback without MetaMask Snap APIs, and prompt-free restoration of an already-authorized provider on reload. See [verification](docs/VERIFICATION.md).
+Current release evidence: GenVM semantic/schema checks pass for the unchanged deployed contract; Python `20/20`; frontend `13/13`; production build passes. The wallet regressions cover EIP-6963/legacy deduplication, provider-native Studionet switch/add/readback without MetaMask Snap APIs, and disconnected startup on every reload until the user opens the selector. See [verification](docs/VERIFICATION.md).
 
 ## Deployment
 

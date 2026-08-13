@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Evidence-bound, organization-only sanctions scope signals on GenLayer Studionet.">
-    <meta name="theme-color" content="#eef2fa">
+    <meta name="theme-color" content="#f8fafc">
     <title>Sanctions Scope Signal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/tokens.css">
     <link rel="stylesheet" href="/styles.css">
   </head>
@@ -30,7 +27,7 @@
 
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
-        <div class="hero__copy reveal" style="--i: 0">
+        <div class="hero__copy">
           <p class="network-line"><span class="signal-dot" aria-hidden="true"></span>Studionet · chain 61999</p>
           <h1 id="hero-title">One source. One snapshot. One bounded signal.</h1>
           <p class="hero__lede">Screen an organization against an explicitly selected OFAC or UN publication. GenLayer validators re-fetch the evidence and agree on the consequence before state changes.</p>
@@ -39,7 +36,7 @@
             <a class="text-link" href="#boundary">Read the boundary</a>
           </div>
         </div>
-        <aside class="evidence-slab reveal" style="--i: 1" aria-label="Decision boundary">
+        <aside class="evidence-slab" aria-label="Decision boundary">
           <div class="evidence-slab__head">
             <span>Decision boundary</span>
             <span class="mono">NON-ECONOMIC</span>
@@ -167,7 +164,7 @@
     <dialog id="provider-dialog" aria-labelledby="provider-title">
       <form method="dialog" class="dialog-shell">
         <div class="dialog-head"><h2 id="provider-title">Choose a wallet provider</h2><button class="icon-button" value="cancel" aria-label="Close provider selector">×</button></div>
-        <p>Select an installed EIP-1193 provider. Scope Signal will not choose one for you.</p>
+        <p class="dialog-subtext">Select an installed EIP-1193 provider. Scope Signal will not choose one for you.</p>
         <div class="provider-list" id="provider-list"></div>
       </form>
     </dialog>
