@@ -1,5 +1,7 @@
 export const FINAL_STATUS = "FINALIZED";
 export const SUCCESS_RESULT = "FINISHED_WITH_RETURN";
+const FINAL_STATUS_CODE = 7;
+const SUCCESS_RESULT_CODE = 1;
 
 export function formatError(error) {
   if (error instanceof Error && error.message) return error.message;
@@ -70,13 +72,22 @@ export async function ensureWalletChain(provider, chain) {
 }
 
 export function assertFinalSuccess(receipt) {
-  const status = receipt?.statusName ?? receipt?.status;
-  const execution = receipt?.txExecutionResultName;
-  if (status !== FINAL_STATUS) {
-    throw new Error(`Transaction stopped at ${String(status || "UNKNOWN")}; FINALIZED is required.`);
+  const statuses = [receipt?.statusName, receipt?.status_name, receipt?.status]
+    .filter((value) => value !== undefined && value !== null)
+    .map((value) => value === FINAL_STATUS || Number(value) === FINAL_STATUS_CODE ? FINAL_STATUS : String(value));
+  const executions = [
+    receipt?.txExecutionResultName,
+    receipt?.tx_execution_result_name,
+    receipt?.txExecutionResult,
+    receipt?.tx_execution_result,
+  ]
+    .filter((value) => value !== undefined && value !== null)
+    .map((value) => value === SUCCESS_RESULT || Number(value) === SUCCESS_RESULT_CODE ? SUCCESS_RESULT : String(value));
+  if (!statuses.length || statuses.some((status) => status !== FINAL_STATUS)) {
+    throw new Error(`Transaction stopped at ${statuses.join("/") || "UNKNOWN"}; FINALIZED is required.`);
   }
-  if (execution !== SUCCESS_RESULT) {
-    throw new Error(`Leader execution is ${String(execution || "UNKNOWN")}; no state change is trusted.`);
+  if (!executions.length || executions.some((execution) => execution !== SUCCESS_RESULT)) {
+    throw new Error(`Leader execution is ${executions.join("/") || "UNKNOWN"}; no state change is trusted.`);
   }
   return receipt;
 }
