@@ -8,11 +8,12 @@
 - Contract: `0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26`
 - [Explorer](https://explorer-studio.genlayer.com/address/0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26)
 - [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x00e83a6e97e5495f185d67612f3555e5f999e24c7da350c423e4627bacbab926)
+- [Live app](https://sanctions-scope-signal.vercel.app)
 - Deployment: `FINALIZED`, successful leader execution, Normal consensus, five agreeing votes.
 - Deployed-source parity: RPC `gen_getContractCode`, normalized to LF, returns 16,625 characters with the exact source hash above.
 - Upgrader readback: `0x2e53bb6ED175A7F827590D9D3a353FC51Eb8996a`.
 
-The final public commit and live Vercel artifact hashes are recorded in the immutable final release evidence after hosting verification, avoiding a self-referential tracked-file hash.
+The final public commit and live Vercel artifact hashes are recorded in the immutable final release evidence after hosting verification, avoiding a self-referential tracked-file hash. The stable production URL serves the reviewed frontend with the exact Studionet contract configuration.
 
 ## Reproducible checks
 
@@ -54,5 +55,5 @@ The live assessment preserved the submitted organization, alias, identifier, sou
 ## Known limits
 
 - The unauthorized upgrade probe was rejected by Studio before transaction submission, so it has no Explorer transaction.
-- The live app URL and compiled-asset parity belong to the later hosting checkpoint.
+- The stable live URL, production ownership, and compiled-asset parity were verified at the hosting checkpoint; generated deployment identifiers remain in the immutable final evidence rather than this source commit.
 - The product remains a Studionet prototype and not a production compliance determination.

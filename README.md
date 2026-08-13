@@ -6,7 +6,7 @@ An organization-only GenLayer PROJECT that binds a sanctions-screening case to o
 
 - [Studionet contract](https://explorer-studio.genlayer.com/address/0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26)
 - [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x00e83a6e97e5495f185d67612f3555e5f999e24c7da350c423e4627bacbab926)
-- Live app: added after the governed Vercel deployment is verified
+- [Live app](https://sanctions-scope-signal.vercel.app)
 
 ## Trust problem
 
