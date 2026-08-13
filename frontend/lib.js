@@ -86,7 +86,13 @@ export function assertFinalSuccess(receipt) {
   if (!statuses.length || statuses.some((status) => status !== FINAL_STATUS)) {
     throw new Error(`Transaction stopped at ${statuses.join("/") || "UNKNOWN"}; FINALIZED is required.`);
   }
-  if (!executions.length || executions.some((execution) => execution !== SUCCESS_RESULT)) {
+  const leaderReceipts = receipt?.consensus_data?.leader_receipt;
+  const successfulLeader = Array.isArray(leaderReceipts) && leaderReceipts.some((leader) => (
+    leader && typeof leader === "object"
+    && leader.error == null
+    && Object.hasOwn(leader, "result")
+  ));
+  if (executions.some((execution) => execution !== SUCCESS_RESULT) || (!executions.length && !successfulLeader)) {
     throw new Error(`Leader execution is ${executions.join("/") || "UNKNOWN"}; no state change is trusted.`);
   }
   return receipt;

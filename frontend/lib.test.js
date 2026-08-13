@@ -35,10 +35,17 @@ test("accepts named and numeric FINALIZED successful execution only", () => {
   assert.doesNotThrow(() => assertFinalSuccess({ statusName: "FINALIZED", txExecutionResultName: "FINISHED_WITH_RETURN" }));
   assert.doesNotThrow(() => assertFinalSuccess({ status: 7, txExecutionResult: 1 }));
   assert.doesNotThrow(() => assertFinalSuccess({ status_name: "FINALIZED", tx_execution_result: "1" }));
+  assert.doesNotThrow(() => assertFinalSuccess({ status: 7, consensus_data: { leader_receipt: [{ error: null, result: "2" }] } }));
   assert.throws(() => assertFinalSuccess({ statusName: "ACCEPTED", txExecutionResultName: "FINISHED_WITH_RETURN" }), /FINALIZED/);
   assert.throws(() => assertFinalSuccess({ statusName: "FINALIZED", txExecutionResultName: "FINISHED_WITH_ERROR" }), /no state change/);
   assert.throws(() => assertFinalSuccess({ statusName: "ACCEPTED", status: 7, txExecutionResult: 1 }), /FINALIZED/);
   assert.throws(() => assertFinalSuccess({ status: 7 }), /no state change/);
+  assert.throws(() => assertFinalSuccess({ status: 7, consensus_data: { leader_receipt: [{ error: "reverted", result: null }] } }), /no state change/);
+  assert.throws(() => assertFinalSuccess({
+    status: 7,
+    txExecutionResult: 2,
+    consensus_data: { leader_receipt: [{ error: null, result: "2" }] },
+  }), /no state change/);
 });
 
 test("decodes a transaction-specific case id and never falls back to a count", () => {
