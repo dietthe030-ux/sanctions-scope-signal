@@ -111,7 +111,8 @@ function positiveInteger(value) {
     }
   }
   if (value && typeof value === "object") {
-    for (const key of ["result", "return", "returnValue", "value", "calldata"]) {
+    if (Object.hasOwn(value, "status") && value.status !== "return") return null;
+    for (const key of ["result", "return", "returnValue", "value", "calldata", "payload", "readable"]) {
       const candidate = positiveInteger(value[key]);
       if (candidate) return candidate;
     }

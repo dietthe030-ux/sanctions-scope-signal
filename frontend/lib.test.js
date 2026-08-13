@@ -51,6 +51,16 @@ test("accepts named and numeric FINALIZED successful execution only", () => {
 test("decodes a transaction-specific case id and never falls back to a count", () => {
   const receipt = { consensus_data: { leader_receipt: [{ error: null, result: "42" }] } };
   assert.equal(extractCreatedCaseId(receipt), 42n);
+  assert.equal(extractCreatedCaseId({
+    consensus_data: {
+      leader_receipt: [{ result: { status: "return", payload: { raw: [2], readable: "43" } } }],
+    },
+  }), 43n);
+  assert.throws(() => extractCreatedCaseId({
+    consensus_data: {
+      leader_receipt: [{ result: { status: "rollback", payload: { readable: "44" } } }],
+    },
+  }), /valid case ID/);
   assert.throws(() => extractCreatedCaseId({ caseCount: 99 }), /leader return/);
 });
 
