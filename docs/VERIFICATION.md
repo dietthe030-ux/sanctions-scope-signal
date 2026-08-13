@@ -32,7 +32,7 @@ Results on the release candidate:
 - GenVM AST and SDK semantic validation: pass; 11 public methods.
 - GenVM schema extraction: pass; 4 view and 7 write methods.
 - Python: 20 passed.
-- Frontend: 12 passed, including duplicate-provider and non-MetaMask Studionet connection regressions.
+- Frontend: 14 passed, including duplicate-provider, non-MetaMask Studionet connection, and safe reload-restoration regressions.
 - Production build: passed with the exact contract address above.
 
 ## Live proof matrix

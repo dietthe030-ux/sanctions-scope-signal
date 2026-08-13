@@ -10,6 +10,7 @@ import {
   formatError,
   parseCase,
   registerWalletProvider,
+  restoreWalletProvider,
   serializeWriteArgs,
   walletProviderAliases,
 } from "./lib.js";
@@ -114,6 +115,32 @@ test("adds Studionet only when the selected provider reports an unknown chain", 
     "wallet_switchEthereumChain",
     "eth_chainId",
   ]);
+});
+
+test("restores only an already-authorized provider on Studionet without prompting", async () => {
+  const methods = [];
+  const provider = {
+    request: async ({ method }) => {
+      methods.push(method);
+      if (method === "eth_accounts") return ["0x1111111111111111111111111111111111111111"];
+      if (method === "eth_chainId") return "0xf22f";
+      throw new Error(`Unexpected method ${method}`);
+    },
+  };
+  const providers = new Map();
+  registerWalletProvider(providers, { rdns: "com.okex.wallet", name: "OKX Wallet" }, provider);
+  const restored = await restoreWalletProvider(providers, { aliases: ["com.okex.wallet", "okx wallet"] }, { id: 61999 });
+  assert.equal(restored.account, "0x1111111111111111111111111111111111111111");
+  assert.deepEqual(methods, ["eth_accounts", "eth_chainId"]);
+});
+
+test("does not restore a revoked or wrong-network wallet session", async () => {
+  for (const [accounts, chainId] of [[[], "0xf22f"], [["0x1"], "0x1"]]) {
+    const provider = { request: async ({ method }) => method === "eth_accounts" ? accounts : chainId };
+    const providers = new Map();
+    registerWalletProvider(providers, { name: "OKX Wallet" }, provider);
+    assert.equal(await restoreWalletProvider(providers, { aliases: ["okx wallet"] }, { id: 61999 }), null);
+  }
 });
 
 test("persists intent and hash across timeout, then reconciles without replay", async () => {

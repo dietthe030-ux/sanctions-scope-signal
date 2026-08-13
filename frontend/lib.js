@@ -32,6 +32,17 @@ export function registerWalletProvider(providers, info, provider) {
   providers.set(key, { info: normalizedInfo, provider, aliases });
 }
 
+export async function restoreWalletProvider(providers, remembered, chain) {
+  if (!remembered || !Array.isArray(remembered.aliases)) return null;
+  const match = [...providers.values()].find((entry) => remembered.aliases.some((alias) => entry.aliases.includes(alias)));
+  if (!match) return null;
+  const accounts = await match.provider.request({ method: "eth_accounts" });
+  if (!Array.isArray(accounts) || !accounts[0]) return null;
+  const chainId = String(await match.provider.request({ method: "eth_chainId" })).toLowerCase();
+  if (chainId !== `0x${chain.id.toString(16)}`) return null;
+  return { ...match, account: accounts[0] };
+}
+
 function providerErrorCode(error) {
   return Number(error?.code ?? error?.data?.originalError?.code);
 }

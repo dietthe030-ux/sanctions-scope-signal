@@ -11,8 +11,10 @@ import {
   formatError,
   parseCase,
   registerWalletProvider,
+  restoreWalletProvider,
   serializeWriteArgs,
   shortAddress,
+  walletProviderAliases,
 } from "./lib.js";
 
 const config = window.__SSS_CONFIG__ || {};
@@ -29,6 +31,8 @@ const state = {
 };
 
 const pendingStore = createPendingWriteStore(window.localStorage, `sss:pending:${contractAddress || "undeployed"}`);
+const walletMemoryKey = `sss:wallet:${contractAddress || "undeployed"}`;
+let walletRestoreInFlight = false;
 
 const byId = (id) => document.getElementById(id);
 const elements = {
@@ -266,9 +270,58 @@ function invalidateWallet(message) {
   state.provider = null;
   state.account = "";
   state.writeClient = null;
+  window.localStorage.removeItem(walletMemoryKey);
   elements.connect.textContent = "Connect wallet";
   elements.disconnect.hidden = true;
   elements.walletState.textContent = message || "Wallet disconnected locally.";
+}
+
+function activateWallet(provider, info, account, restored = false) {
+  detachProviderHandlers();
+  state.provider = provider;
+  state.account = account;
+  state.writeClient = createClient({ chain: studionet, account, provider });
+  elements.connect.textContent = "Switch wallet";
+  elements.disconnect.hidden = false;
+  elements.walletState.textContent = `Connected ${shortAddress(account)} through ${info?.name || "selected provider"}.`;
+  window.localStorage.setItem(walletMemoryKey, JSON.stringify({
+    version: 1,
+    aliases: walletProviderAliases(info),
+    name: info?.name || "selected provider",
+  }));
+  state.detachProvider = bindProviderLifecycle(provider, (reason) => invalidateWallet({
+    accountsChanged: "Wallet account changed. Reconnect through the provider selector before any write.",
+    chainChanged: "Wallet network changed. Reconnect and confirm Studionet before any write.",
+    disconnect: "Wallet provider disconnected. Reconnect before any write.",
+  }[reason]));
+  notice(restored ? "Authorized wallet session restored on Studionet. No write has been sent." : "Wallet connected to Studionet. No write has been sent.", "success");
+}
+
+async function tryRestoreRememberedWallet() {
+  if (walletRestoreInFlight || state.account) return;
+  let remembered;
+  try {
+    remembered = JSON.parse(window.localStorage.getItem(walletMemoryKey) || "null");
+  } catch {
+    window.localStorage.removeItem(walletMemoryKey);
+    return;
+  }
+  if (remembered?.version !== 1) return;
+  walletRestoreInFlight = true;
+  try {
+    const restored = await restoreWalletProvider(state.providers, remembered, studionet);
+    if (!restored) return;
+    activateWallet(restored.provider, restored.info, restored.account, true);
+  } catch {
+    window.localStorage.removeItem(walletMemoryKey);
+  } finally {
+    walletRestoreInFlight = false;
+  }
+  try {
+    if (state.account && pendingStore.load()) await reconcilePendingWrite();
+  } catch (error) {
+    notice(formatError(error), "error");
+  }
 }
 
 async function connectProvider(provider, info) {
@@ -278,21 +331,8 @@ async function connectProvider(provider, info) {
     if (!Array.isArray(accounts) || !accounts[0]) throw new Error("The selected wallet returned no account.");
     const account = accounts[0];
     await ensureWalletChain(provider, studionet);
-    const client = createClient({ chain: studionet, account, provider });
-    detachProviderHandlers();
-    state.provider = provider;
-    state.account = account;
-    state.writeClient = client;
-    elements.connect.textContent = "Switch wallet";
-    elements.disconnect.hidden = false;
-    elements.walletState.textContent = `Connected ${shortAddress(account)} through ${info?.name || "selected provider"}.`;
+    activateWallet(provider, info, account);
     elements.providerDialog.close();
-    notice("Wallet connected to Studionet. No write has been sent.", "success");
-    state.detachProvider = bindProviderLifecycle(provider, (reason) => invalidateWallet({
-      accountsChanged: "Wallet account changed. Reconnect through the provider selector before any write.",
-      chainChanged: "Wallet network changed. Reconnect and confirm Studionet before any write.",
-      disconnect: "Wallet provider disconnected. Reconnect before any write.",
-    }[reason]));
     if (pendingStore.load()) await reconcilePendingWrite();
   } catch (error) {
     notice(`${formatError(error)} Choose a provider again or approve the Studionet switch.`, "error");
@@ -305,7 +345,10 @@ elements.connect.addEventListener("click", () => {
   elements.providerList.querySelector("button")?.focus();
 });
 
-window.addEventListener("eip6963:announceProvider", (event) => registerProvider(event.detail.info, event.detail.provider));
+window.addEventListener("eip6963:announceProvider", (event) => {
+  registerProvider(event.detail.info, event.detail.provider);
+  window.setTimeout(() => void tryRestoreRememberedWallet(), 0);
+});
 elements.disconnect.addEventListener("click", () => {
   invalidateWallet("Wallet disconnected locally. Any persisted transaction remains available for later reconciliation.");
   notice("Local wallet session cleared. No provider account was selected automatically.", "success");
@@ -435,6 +478,8 @@ if (contractAddress) {
     elements.reconcile.hidden = false;
     notice(formatError(error), "error");
   }
+  discoverProviders();
+  void tryRestoreRememberedWallet();
 } else {
   document.querySelectorAll("button[type='submit'], #assess-case, #load-case").forEach((button) => {
     if (button.id !== "load-case") button.disabled = true;
