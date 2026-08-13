@@ -15,7 +15,7 @@ An upgrade may add methods or change deterministic logic, but must not reorder, 
 field type. Any incompatible storage change requires a separately reviewed migration and replacement
 deployment.
 
-## Draft Studionet manifest
+## Studionet deployment manifest
 
 | Field | Intended value |
 | --- | --- |
@@ -26,11 +26,12 @@ deployment.
 | Classification | `UPGRADABLE` |
 | Linked contracts | none |
 | Configuration transactions | none |
-| Contract address | recorded after deployment |
-| Deployment transaction | recorded after deployment |
-| Explorer | `https://explorer-studio.genlayer.com` plus deployed address |
-| Exact source commit and SHA-256 | recorded in the hash-bound deployment evidence |
-| Studio deployer/upgrader | selected and recorded in the private checkpoint evidence before deployment; public address added after live verification |
+| Contract address | `0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26` |
+| Deployment transaction | `0x00e83a6e97e5495f185d67612f3555e5f999e24c7da350c423e4627bacbab926` |
+| Explorer | `https://explorer-studio.genlayer.com/address/0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26` |
+| Exact source commit | `d7e84586350d6b138816028e64434094ff9c9ea0` |
+| Contract SHA-256, normalized LF | `f33a0edb4ba6b4b1f8e3265bad12fa5bb269bfe87d287d72f44647c89a2989da` |
+| Studio deployer/upgrader | `0x2e53bb6ED175A7F827590D9D3a353FC51Eb8996a` |
 
 No private key, password, token, seed phrase, or Studio credential belongs in this repository.
 

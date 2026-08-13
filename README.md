@@ -1,82 +1,112 @@
 # Sanctions Scope Signal
 
-Sanctions Scope Signal is an organization-only GenLayer PROJECT that binds one screening case to one
-official OFAC or UN publication. Validators independently fetch the source and agree on a non-economic
-consequence: `HOLD`, `ESCALATE`, `NO_SIGNAL`, or `UNRESOLVED`.
+An organization-only GenLayer PROJECT that binds a sanctions-screening case to one official publication and records the consensus consequence on Studionet.
+
+## Verified links
+
+- [Studionet contract](https://explorer-studio.genlayer.com/address/0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26)
+- [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x00e83a6e97e5495f185d67612f3555e5f999e24c7da350c423e4627bacbab926)
+- Live app: added after the governed Vercel deployment is verified
+
+## Trust problem
+
+A case owner can provide an organization's name and identifiers, but must not be able to supply or silently manipulate the verdict. Public lists can also be unavailable, incomplete, or change while validators are evaluating them. This project therefore treats the submitted subject, the selected official-source policy, the snapshot label, and the fetched evidence as separate trust boundaries.
 
 It is not legal advice, KYC/AML clearance, an enforcement decision, or a payment product.
 
-## Why GenLayer
+## Why GenLayer is essential
 
-A case owner can supply names and identifiers, but cannot supply the verdict. The Intelligent Contract
-locks the source policy and snapshot label, fetches official-source evidence inside a nondeterministic
-block, and uses a custom validator that independently re-fetches and re-derives material decision fields.
-Only consensus-agreed state becomes authoritative.
+The Intelligent Contract freezes the case inputs, fetches the official OFAC or UN source inside a nondeterministic block, and asks validators to independently re-fetch and re-derive the material decision fields. Only consensus-agreed state becomes authoritative. Evidence failure is recorded as `UNRESOLVED`, never converted into clearance.
 
-## Decision boundary
-
-| Evidence state | Outcome | Consequence |
+| Evidence state | Outcome | On-chain consequence |
 | --- | --- | --- |
-| Strong identifier visibly linked to the same organization record | `CONFIRMED_IDENTIFIER_MATCH` | `HOLD` |
+| Strong identifier linked to the same organization record | `CONFIRMED_IDENTIFIER_MATCH` | `HOLD` |
 | Name or alias linked without a strong identifier | `PROBABLE_ALIAS_MATCH` | `ESCALATE` |
 | Conflicting, wrong-entity, or insufficient context | `AMBIGUOUS` | `ESCALATE` |
 | Complete bound UN XML contains no supplied term | `NO_MATCH_IN_BOUND_SNAPSHOT` | `NO_SIGNAL` |
 | Source, coverage, model, or evidence failure | `UNRESOLVED` | `UNRESOLVED` |
 
-OFAC absence remains `UNRESOLVED` because the CSV response does not expose a durable completeness proof
-to the contract. A later source update requires a new case; old cases are never silently reinterpreted.
+OFAC absence remains `UNRESOLVED`: its CSV response does not expose a durable completeness proof to the contract.
+
+## How it works
+
+1. Connect through the explicit supported-provider chooser; the app never auto-selects MetaMask.
+2. Create a case with the organization's legal name and source policy.
+3. Add public aliases and identifiers, then freeze the case with a snapshot label.
+4. Request assessment. Validators fetch and evaluate the official source under Normal consensus.
+5. Wait for `FINALIZED`, require successful leader execution, and verify the authoritative case readback.
+6. If the official publication changes, create a newer assessed case and supersede the earlier record without rewriting history.
 
 ## Architecture
 
-- `contracts/sanctions_scope_signal.py` — upgradeable Intelligent Contract and authoritative state machine.
-- `tests/direct/` — deterministic lifecycle, evidence, consensus, and upgrade-boundary tests.
-- `frontend/` — static accessible frontend using `genlayer-js`.
-- `scripts/build.cjs` — production bundle and Studionet-only configuration generator.
-- `docs/DEPLOYMENT_RECOVERY.md` — upgrade classification, manifest fields, and recovery limits.
+- `contracts/sanctions_scope_signal.py` is the authoritative state machine, evidence fetcher, validator, and upgrade surface.
+- `frontend/` is a static browser client using `genlayer-js`; it signs writes through the selected EIP-1193 provider and reads Studionet directly.
+- `scripts/build.cjs` bundles the frontend and injects the Studionet configuration at build time.
+- `tests/` contains deterministic lifecycle regressions and official GenVM semantic/schema preflight checks.
+- `docs/` contains reviewer-facing deployment, recovery, and verification material.
 
-Lifecycle: `DRAFT -> FROZEN -> SIGNALLED | UNRESOLVED -> SUPERSEDED`.
+There is no application backend or private database. Contract state is the source of truth; browser local storage holds only pending-write reconciliation data.
 
-## Frontend transaction safety
+## Intelligent Contract
 
-Wallet connection always opens an explicit selector for supported EIP-1193 providers. The app never
-automatically selects MetaMask or the first injected wallet. Every write waits for `FINALIZED`, requires
-`FINISHED_WITH_RETURN`, and verifies authoritative contract readback before advancing the interface.
-Creation uses the transaction-specific leader return for the case ID and never guesses from a global
-counter.
+The case owner may call `create_case`, `add_alias`, `add_identifier`, `freeze_case`, `assess_case`, and `supersede_case`. Public views expose cases, count, source URLs, and upgraders. Lifecycle:
 
-## Local verification
+`DRAFT -> FROZEN -> SIGNALLED | UNRESOLVED -> SUPERSEDED`
 
-Prerequisites are Node.js 22+, Python 3.13+, `genlayer-test`, and `genvm-lint`. Install only according to
-your environment policy.
+The validator compares the leader's source policy, source URL, snapshot, digest, match, outcome, consequence, and reason against an independent derivation. Supersession requires a newer, assessed, current case owned by the same account. The contract has no token, payment, stake, reward, or economic value path.
+
+## Transaction lifecycle
+
+Before submission, the frontend persists the contract, account, function, and exact serialized arguments. It then stores the returned transaction hash, waits for `FINALIZED`, requires `FINISHED_WITH_RETURN`, and performs function-specific readback. A timeout, reload, delayed readback, or provider lifecycle event keeps the original intent locked and never automatically replays it. Only an explicit EIP-1193 rejection code `4001` clears a pre-submission intent.
+
+## Run locally
+
+Prerequisites: Node.js 22+, Python 3.13+, the pinned package dependencies, `genvm-lint`, and its configured GenVM SDK artifact. Install only under your environment policy.
+
+```powershell
+$env:VITE_CONTRACT_ADDRESS='0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26'
+npm run build
+python -m http.server 4173 --directory dist
+```
+
+Open `http://localhost:4173`. The target is Studionet only: chain `61999`, RPC `https://studio.genlayer.com/api`.
+
+## Tests and verification
 
 ```powershell
 $env:PYTHONUTF8='1'
-genvm-lint lint contracts\sanctions_scope_signal.py --json
-py -3.13 -m pytest tests\direct -q --cache-clear
+genvm-lint check contracts\sanctions_scope_signal.py --json
+genvm-lint schema contracts\sanctions_scope_signal.py --json
+py -3.13 -m pytest tests -q --cache-clear
 npm test
+$env:VITE_CONTRACT_ADDRESS='0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26'
 npm run build
 ```
 
-The deployment target is Studionet only:
+Current release evidence: GenVM semantic/schema checks pass; Python `20/20`; frontend `9/9`; production build passes. See [verification](docs/VERIFICATION.md).
 
-- Chain ID: `61999`
-- RPC: `https://studio.genlayer.com/api`
-- Explorer: `https://explorer-studio.genlayer.com`
+## Deployment
 
-Copy `.env.example` to a local `.env` only after deployment and set the real
-`VITE_CONTRACT_ADDRESS`. Never use a placeholder address in production configuration.
+- Network: Studionet, chain `61999`
+- Contract: `0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26`
+- Deployment transaction: `0x00e83a6e97e5495f185d67612f3555e5f999e24c7da350c423e4627bacbab926`
+- Contract source commit: `d7e84586350d6b138816028e64434094ff9c9ea0`
+- Contract SHA-256, normalized LF: `f33a0edb4ba6b4b1f8e3265bad12fa5bb269bfe87d287d72f44647c89a2989da`
 
-## Recovery
+RPC readback matches that source hash. The selected deployer remains the sole recorded upgrader; a separate rehearsal deployment completed an authorized same-source upgrade. See [deployment and recovery](docs/DEPLOYMENT_RECOVERY.md).
 
-The deployment sender is registered as the contract upgrader. Upgrade authority is lost if that Studio
-account becomes unavailable; a Studionet reset destroys the old address and state. See
-[`docs/DEPLOYMENT_RECOVERY.md`](docs/DEPLOYMENT_RECOVERY.md) for the storage-compatibility plan and
-replacement runbook.
+## Security and trust boundaries
+
+- Accept only public organization data; do not submit personal or confidential information.
+- The case owner controls inputs, not the validator-derived result.
+- A source or consensus failure produces `UNRESOLVED`, not `NO_SIGNAL`.
+- Wallet account, chain, or disconnect events invalidate the write client.
+- No secret, private key, wallet export, or credential belongs in this repository.
+- Upgrade authority depends on the recorded Studio account; Studionet reset destroys the old address and state.
 
 ## Known limitations
 
 - Public-list screening can produce false positives and false negatives; professional review remains required.
-- This prototype accepts public organization identifiers only and must not be used for personal data.
-- Public sources can change between validator requests; material disagreement prevents state mutation.
 - No ownership/control graph, licensing analysis, jurisdictional nexus, or sanctions-program exception analysis is performed.
-- Studionet is a development network and not a production compliance system.
+- Public sources can change between validator requests; material disagreement prevents a decisive state mutation.
+- Studionet is a development network, not a production compliance system.
