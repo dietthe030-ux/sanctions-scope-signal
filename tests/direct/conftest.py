@@ -81,9 +81,10 @@ class RootAccessor:
 
 
 class Response:
-    def __init__(self, status, body):
+    def __init__(self, status, body, headers=None):
         self.status_code = status
         self.body = body.encode("utf-8") if isinstance(body, str) else body
+        self.headers = headers or {}
 
 
 class PublicWrite:
@@ -116,6 +117,7 @@ class DirectVM:
         self.strict_mocks = False
         self.validator = None
         self.leader_value = None
+        self.web_requests = []
         self.sender = FakeAddress("0x00000000000000000000000000000000000000a1")
 
     def mock_web(self, pattern, response):
@@ -128,13 +130,33 @@ class DirectVM:
         self.web_mocks.clear()
         self.llm_mocks.clear()
 
-    def find_web(self, url):
+    def find_web(self, url, headers=None):
+        self.web_requests.append((url, dict(headers or {})))
         for pattern, response, _ in self.web_mocks:
             if pattern.search(url):
                 for item in self.web_mocks:
                     if item[0] is pattern:
                         item[2] += 1
-                return Response(response.get("status", 200), response.get("body", ""))
+                body = response.get("body", "")
+                body_bytes = body.encode("utf-8") if isinstance(body, str) else body
+                range_header = (headers or {}).get("Range")
+                if range_header and response.get("supports_range", True):
+                    match = re.fullmatch(r"bytes=(\d+)-(\d+)", range_header)
+                    if match is None:
+                        raise UserError("Malformed test Range header")
+                    start, requested_end = (int(item) for item in match.groups())
+                    end = min(requested_end, len(body_bytes) - 1)
+                    sliced = body_bytes[start : end + 1]
+                    content_range = response.get(
+                        "content_range",
+                        f"bytes {start}-{end}/{len(body_bytes)}",
+                    )
+                    return Response(206, sliced, {"Content-Range": content_range})
+                return Response(
+                    response.get("status", 200),
+                    body_bytes,
+                    response.get("headers", {}),
+                )
         raise UserError(f"No web mock matched {url}")
 
     def find_llm(self, prompt):

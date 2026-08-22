@@ -378,6 +378,38 @@ def test_complete_un_snapshot_can_produce_bounded_no_signal(direct_vm, direct_de
     assert case["outcome"] == "NO_MATCH_IN_BOUND_SNAPSHOT"
     assert case["consequence"] == "NO_SIGNAL"
     assert case["match_narrative"] == "No supplied name, alias, or identifier occurs in the complete bound UN HTML publication."
+    ranges = [headers["Range"] for _, headers in direct_vm.web_requests if "Range" in headers]
+    expected = ["bytes=0-499999", "bytes=500000-999999"]
+    assert ranges[:2] == expected
+    assert ranges[2:4] == expected
+
+
+def test_un_freeze_fails_closed_when_server_does_not_honor_ranges(direct_vm, direct_deploy):
+    direct_vm.mock_web(
+        r"scsanctions\.un\.org/consolidated",
+        {"status": 200, "body": "x" * 600_000, "supports_range": False},
+    )
+    contract = direct_deploy(CONTRACT)
+    case_id = make_case(contract, policy="UN_CONSOLIDATED")
+    with direct_vm.expect_revert("Official source is unavailable or invalid"):
+        contract.freeze_case(case_id)
+    assert read_case(contract, case_id)["stage"] == "DRAFT"
+
+
+def test_un_freeze_fails_closed_on_inconsistent_content_range(direct_vm, direct_deploy):
+    direct_vm.mock_web(
+        r"scsanctions\.un\.org/consolidated",
+        {
+            "status": 200,
+            "body": "x" * 600_000,
+            "content_range": "bytes 1-200000/600000",
+        },
+    )
+    contract = direct_deploy(CONTRACT)
+    case_id = make_case(contract, policy="UN_CONSOLIDATED")
+    with direct_vm.expect_revert("Official source is unavailable or invalid"):
+        contract.freeze_case(case_id)
+    assert read_case(contract, case_id)["frozen_source_digest"] == ""
 
 
 def test_validator_rederives_and_rejects_material_disagreement(direct_vm, direct_deploy):

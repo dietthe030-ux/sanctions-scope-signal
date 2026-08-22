@@ -21,6 +21,9 @@ OUTCOMES = (
     "UNRESOLVED",
 )
 
+UN_CHUNK_SIZE = 500_000
+UN_MAX_SOURCE_BYTES = 3_000_000
+
 
 def _canonical(value: dict) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
@@ -109,11 +112,58 @@ def _valid_model_result(value: object) -> bool:
     )
 
 
+def _response_header(response, name: str) -> str:
+    for key, value in response.headers.items():
+        key_text = key.decode("utf-8") if isinstance(key, bytes) else str(key)
+        if key_text.lower() == name.lower():
+            return value.decode("utf-8") if isinstance(value, bytes) else str(value)
+    return ""
+
+
 def _fetch_source(policy: str, source_url: str):
-    response = gl.nondet.web.get(source_url)
-    body_bytes = response.body
+    if policy != "UN_CONSOLIDATED":
+        response = gl.nondet.web.get(source_url)
+        body_bytes = response.body
+        body = body_bytes.decode("utf-8")
+        return response.status_code, body_bytes, body
+
+    chunks = []
+    start = 0
+    total = 0
+    while start < total or start == 0:
+        requested_end = start + UN_CHUNK_SIZE - 1
+        response = gl.nondet.web.get(
+            source_url,
+            headers={"Range": f"bytes={start}-{requested_end}"},
+        )
+        match = re.fullmatch(
+            r"bytes (\d+)-(\d+)/(\d+)",
+            _response_header(response, "Content-Range").strip(),
+        )
+        if response.status_code != 206 or match is None:
+            raise ValueError("Official source did not honor the required byte range")
+
+        returned_start, returned_end, returned_total = (int(item) for item in match.groups())
+        if total == 0:
+            total = returned_total
+            if total < 100 or total > UN_MAX_SOURCE_BYTES:
+                raise ValueError("Official source size is outside the accepted boundary")
+        expected_end = min(requested_end, total - 1)
+        if (
+            returned_total != total
+            or returned_start != start
+            or returned_end != expected_end
+            or len(response.body) != expected_end - start + 1
+        ):
+            raise ValueError("Official source byte ranges are incomplete or inconsistent")
+        chunks.append(response.body)
+        start = expected_end + 1
+
+    body_bytes = b"".join(chunks)
+    if len(body_bytes) != total:
+        raise ValueError("Official source reconstruction is incomplete")
     body = body_bytes.decode("utf-8")
-    return response.status_code, body_bytes, body
+    return 200, body_bytes, body
 
 
 class SanctionsScopeSignal(gl.Contract):
