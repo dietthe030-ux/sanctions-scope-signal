@@ -9,6 +9,7 @@ import {
   ensureWalletChain,
   executeGuardedWrite,
   extractCreatedCaseId,
+  uniqueCreatedCaseId,
   formatBoundDigestLabel,
   formatError,
   parseCase,
@@ -52,6 +53,11 @@ test("accepts named and numeric FINALIZED successful execution only", () => {
     status: "FINALIZED",
     txExecutionResultName: { toString: () => "SUCCESS" },
   }));
+  assert.doesNotThrow(() => assertFinalSuccess({ status: 7, txExecutionResultName: " ExecutionResult.SUCCESS " }));
+  assert.doesNotThrow(() => assertFinalSuccess({
+    status: 7,
+    consensus_data: { leader_receipt: [{ mode: "leader", execution_result: " ExecutionResult.SUCCESS ", result: "encoded-return" }] },
+  }));
   assert.doesNotThrow(() => assertFinalSuccess({
     status: 7,
     txExecutionResultName: "FINISHED_WITH_RETURN",
@@ -93,6 +99,16 @@ test("accepts named and numeric FINALIZED successful execution only", () => {
     txExecutionResult: 2,
     consensus_data: { leader_receipt: [{ error: null, result: "2" }] },
   }), /no state change/);
+});
+
+test("recovers one authoritative created case without guessing from the count", () => {
+  const intent = { account: "0xabc", legalName: "Seabridge Cargo Alliance", sourcePolicy: "UN_CONSOLIDATED" };
+  const records = [
+    { case_id: 3, owner: "0xAbC", legal_name: "Seabridge Cargo Alliance", source_policy: "UN_CONSOLIDATED" },
+    { case_id: 4, owner: "0xdef", legal_name: "Seabridge Cargo Alliance", source_policy: "UN_CONSOLIDATED" },
+  ];
+  assert.equal(uniqueCreatedCaseId(records, intent, 3n), 3n);
+  assert.throws(() => uniqueCreatedCaseId([...records, { ...records[0], case_id: 5 }], intent, 3n), /ambiguous/);
 });
 
 test("decodes a transaction-specific case id and never falls back to a count", () => {

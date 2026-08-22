@@ -8,6 +8,7 @@ import {
   ensureWalletChain,
   executeGuardedWrite,
   extractCreatedCaseId,
+  uniqueCreatedCaseId,
   formatBoundDigestLabel,
   formatError,
   parseCase,
@@ -84,10 +85,10 @@ async function readCase(caseId) {
   return parseCase(raw);
 }
 
-async function finalizeWrite(functionName, args, button, readback) {
+async function finalizeWrite(functionName, args, button, readback, intentContext = {}) {
   const client = requireWriteClient();
   const account = state.account;
-  const intent = { contractAddress, account, functionName, args: serializeWriteArgs(args) };
+  const intent = { contractAddress, account, functionName, args: serializeWriteArgs(args), ...intentContext };
   const existing = pendingStore.load();
   setButton(button, "loading", existing ? "Reconciling pending…" : "Waiting for finality…");
   notice(existing ? "Reconciling the stored transaction before any retry." : "Write intent persisted. Waiting for a transaction hash and FINALIZED consensus.");
@@ -120,11 +121,30 @@ async function finalizeWrite(functionName, args, button, readback) {
   }
 }
 
+async function resolveCreatedCase(receipt, pending) {
+  try {
+    return await readCase(extractCreatedCaseId(receipt));
+  } catch (error) {
+    if (!/leader return|valid case ID/.test(formatError(error))) throw error;
+    const count = BigInt(await readClient.readContract({ address: contractAddress, functionName: "get_case_count", args: [] }));
+    const minimumId = pending.caseCountBefore == null ? 1n : BigInt(pending.caseCountBefore) + 1n;
+    const records = await Promise.all(Array.from(
+      { length: Number(count - minimumId + 1n) },
+      (_, index) => readCase(minimumId + BigInt(index)),
+    ));
+    const caseId = uniqueCreatedCaseId(records, {
+      account: pending.account,
+      legalName: pending.args[0],
+      sourcePolicy: pending.args[1],
+    }, minimumId);
+    return records.find((record) => BigInt(record.case_id) === caseId);
+  }
+}
+
 async function verifyPendingReadback(receipt, _hash, pending) {
   const args = pending.args.map((value) => value?.bigint ? BigInt(value.bigint) : value);
   if (pending.functionName === "create_case") {
-    const caseId = extractCreatedCaseId(receipt);
-    const record = await readCase(caseId);
+    const record = await resolveCreatedCase(receipt, pending);
     if (record.owner.toLowerCase() !== pending.account.toLowerCase() || record.legal_name !== args[0] || record.source_policy !== args[1]) {
       throw new Error("Authoritative creation readback does not match the persisted intent.");
     }
@@ -358,15 +378,15 @@ elements.createForm.addEventListener("submit", async (event) => {
   const legalName = byId("legal-name").value.trim();
   const policy = byId("source-policy").value;
   try {
+    const caseCountBefore = String(await readClient.readContract({ address: contractAddress, functionName: "get_case_count", args: [] }));
     await finalizeWrite("create_case", [legalName, policy], button, async (receipt, _hash, intent) => {
-      const caseId = extractCreatedCaseId(receipt);
-      const record = await readCase(caseId);
+      const record = await resolveCreatedCase(receipt, intent);
       if (record.owner.toLowerCase() !== intent.account.toLowerCase() || record.legal_name !== legalName || record.source_policy !== policy) {
         throw new Error("Authoritative readback does not match the signed creation intent.");
       }
       renderCase(record);
       return record;
-    });
+    }, { caseCountBefore });
   } catch {}
 });
 

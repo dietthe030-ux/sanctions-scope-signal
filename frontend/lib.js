@@ -3,6 +3,13 @@ export const SUCCESS_RESULT = "FINISHED_WITH_RETURN";
 const FINAL_STATUS_CODE = 7;
 const SUCCESS_RESULT_CODE = 1;
 
+function normalizeExecution(value) {
+  const text = String(value).trim().toUpperCase();
+  return text === SUCCESS_RESULT || text === "SUCCESS" || text.endsWith(".SUCCESS") || Number(value) === SUCCESS_RESULT_CODE
+    ? SUCCESS_RESULT
+    : text;
+}
+
 export function formatBoundDigestLabel(digest) {
   if (!digest || typeof digest !== "string") return "";
   const trimmed = digest.trim();
@@ -97,10 +104,7 @@ export function assertFinalSuccess(receipt) {
     receipt?.tx_execution_result,
   ]
     .filter((value) => value !== undefined && value !== null)
-    .map((value) => {
-      const text = String(value);
-      return text === SUCCESS_RESULT || text === "SUCCESS" || Number(value) === SUCCESS_RESULT_CODE ? SUCCESS_RESULT : text;
-    });
+    .map(normalizeExecution);
   if (!statuses.length || statuses.some((status) => status !== FINAL_STATUS)) {
     throw new Error(`Transaction stopped at ${statuses.join("/") || "UNKNOWN"}; FINALIZED is required.`);
   }
@@ -110,10 +114,10 @@ export function assertFinalSuccess(receipt) {
       .filter((leader) => leader?.mode === "leader" || leader?.mode == null)
       .map((leader) => leader?.execution_result)
       .filter((value) => value !== undefined && value !== null)
-      .map(String)
+      .map(normalizeExecution)
     : [];
   const explicitSuccessfulLeader = leaderExecutions.length > 0
-    && leaderExecutions.every((execution) => execution === "SUCCESS");
+    && leaderExecutions.every((execution) => execution === SUCCESS_RESULT);
   const successfulLeader = Array.isArray(leaderReceipts) && leaderReceipts.length > 0 && leaderReceipts.every((leader) => (
     leader && typeof leader === "object"
     && leader.error == null
@@ -125,7 +129,7 @@ export function assertFinalSuccess(receipt) {
     leader?.error != null
     || (leader?.result && typeof leader.result === "object" && leader.result.status !== "return")
   ));
-  const failedLeaderExecution = leaderExecutions.some((execution) => execution !== "SUCCESS");
+  const failedLeaderExecution = leaderExecutions.some((execution) => execution !== SUCCESS_RESULT);
   if (executions.length && executions.every((execution) => execution === SUCCESS_RESULT)) {
     return receipt;
   }
@@ -168,6 +172,19 @@ export function extractCreatedCaseId(receipt) {
     if (candidate) return candidate;
   }
   throw new Error("The successful write returned no valid case ID; the global case count will not be used as a guess.");
+}
+
+export function uniqueCreatedCaseId(records, intent, minimumId = 1n) {
+  const matches = records.filter((record) => (
+    BigInt(record.case_id) >= BigInt(minimumId)
+    && String(record.owner).toLowerCase() === String(intent.account).toLowerCase()
+    && record.legal_name === intent.legalName
+    && record.source_policy === intent.sourcePolicy
+  ));
+  if (matches.length !== 1) {
+    throw new Error(`Creation readback matched ${matches.length} cases; transaction identity remains ambiguous.`);
+  }
+  return BigInt(matches[0].case_id);
 }
 
 export function parseCase(raw) {
