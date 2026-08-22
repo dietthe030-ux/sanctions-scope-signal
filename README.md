@@ -23,7 +23,7 @@ The Intelligent Contract freezes the case inputs, fetches the official OFAC or U
 | Strong identifier linked to the same organization record | `CONFIRMED_IDENTIFIER_MATCH` | `HOLD` |
 | Name or alias linked without a strong identifier | `PROBABLE_ALIAS_MATCH` | `ESCALATE` |
 | Conflicting, wrong-entity, or insufficient context | `AMBIGUOUS` | `ESCALATE` |
-| Complete bound UN XML contains no supplied term | `NO_MATCH_IN_BOUND_SNAPSHOT` | `NO_SIGNAL` |
+| Complete bound official UN HTML publication contains no supplied term | `NO_MATCH_IN_BOUND_SNAPSHOT` | `NO_SIGNAL` |
 | Source, coverage, model, or evidence failure | `UNRESOLVED` | `UNRESOLVED` |
 
 OFAC absence remains `UNRESOLVED`: its CSV response does not expose a durable completeness proof to the contract.

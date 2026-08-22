@@ -102,6 +102,13 @@ export function assertFinalSuccess(receipt) {
     throw new Error(`Transaction stopped at ${statuses.join("/") || "UNKNOWN"}; FINALIZED is required.`);
   }
   const leaderReceipts = receipt?.consensus_data?.leader_receipt;
+  const leaderExecutions = Array.isArray(leaderReceipts)
+    ? leaderReceipts
+      .filter((leader) => leader?.mode === "leader" || leader?.mode == null)
+      .map((leader) => leader?.execution_result)
+      .filter((value) => value !== undefined && value !== null)
+      .map(String)
+    : [];
   const successfulLeader = Array.isArray(leaderReceipts) && leaderReceipts.length > 0 && leaderReceipts.every((leader) => (
     leader && typeof leader === "object"
     && leader.error == null
@@ -113,8 +120,9 @@ export function assertFinalSuccess(receipt) {
     leader?.error != null
     || (leader?.result && typeof leader.result === "object" && leader.result.status !== "return")
   ));
-  if (conflictingLeader || executions.some((execution) => execution !== SUCCESS_RESULT) || (!executions.length && !successfulLeader)) {
-    throw new Error(`Leader execution is ${executions.join("/") || "UNKNOWN"}; no state change is trusted.`);
+  const failedLeaderExecution = leaderExecutions.some((execution) => execution !== "SUCCESS");
+  if (conflictingLeader || failedLeaderExecution || executions.some((execution) => execution !== SUCCESS_RESULT) || (!executions.length && !successfulLeader)) {
+    throw new Error(`Leader execution is ${executions.join("/") || leaderExecutions.join("/") || "UNKNOWN"}; no state change is trusted.`);
   }
   return receipt;
 }

@@ -217,29 +217,29 @@ def test_assessment_returns_unresolved_after_source_bytes_change(direct_vm, dire
 
 
 def test_changed_source_cannot_produce_no_signal_hold_or_escalate(direct_vm, direct_deploy):
-    xml_v1 = (
-        "<CONSOLIDATED_LIST><INDIVIDUALS></INDIVIDUALS><ENTITIES>"
-        + ("<ENTITY><FIRST_NAME>Unrelated Entity</FIRST_NAME></ENTITY>" * 9_000)
-        + "</ENTITIES></CONSOLIDATED_LIST>"
+    html_v1 = (
+        "<h1>United Nations Security Council Consolidated List</h1>"
+        "<h2>Composition of the List</h2><b>A. </b><b>Individuals</b><b>B. </b><b>Entities and other groups</b>"
+        + ("<article>Unrelated Entity record</article>" * 15_000)
     )
     direct_vm.mock_web(
-        r"resources/xml/en/name/consolidated\.xml",
-        {"status": 200, "body": xml_v1},
+        r"scsanctions\.un\.org/consolidated",
+        {"status": 200, "body": html_v1},
     )
     contract = direct_deploy(CONTRACT)
     case_id = make_case(contract, policy="UN_CONSOLIDATED")
     contract.freeze_case(case_id)
 
-    # UN XML changed after freeze
-    xml_v2 = (
-        "<CONSOLIDATED_LIST><INDIVIDUALS></INDIVIDUALS><ENTITIES>"
-        + ("<ENTITY><FIRST_NAME>Different Entity Modified</FIRST_NAME></ENTITY>" * 9_000)
-        + "</ENTITIES></CONSOLIDATED_LIST>"
+    # The official UN HTML publication changed after freeze.
+    html_v2 = (
+        "<h1>United Nations Security Council Consolidated List</h1>"
+        "<h2>Composition of the List</h2><b>A. </b><b>Individuals</b><b>B. </b><b>Entities and other groups</b>"
+        + ("<article>Different Entity Modified record</article>" * 15_000)
     )
     direct_vm.clear_mocks()
     direct_vm.mock_web(
-        r"resources/xml/en/name/consolidated\.xml",
-        {"status": 200, "body": xml_v2},
+        r"scsanctions\.un\.org/consolidated",
+        {"status": 200, "body": html_v2},
     )
     contract.assess_case(case_id)
 
@@ -359,14 +359,14 @@ def test_malformed_model_response_fails_closed(direct_vm, direct_deploy):
 
 
 def test_complete_un_snapshot_can_produce_bounded_no_signal(direct_vm, direct_deploy):
-    complete_xml = (
-        "<CONSOLIDATED_LIST><INDIVIDUALS></INDIVIDUALS><ENTITIES>"
-        + ("<ENTITY><FIRST_NAME>Unrelated Entity</FIRST_NAME></ENTITY>" * 9_000)
-        + "</ENTITIES></CONSOLIDATED_LIST>"
+    complete_html = (
+        "<h1>United Nations Security Council Consolidated List</h1>"
+        "<h2>Composition of the List</h2><b>A. </b><b>Individuals</b><b>B. </b><b>Entities and other groups</b>"
+        + ("<article>Unrelated Entity record</article>" * 15_000)
     )
     direct_vm.mock_web(
-        r"resources/xml/en/name/consolidated\.xml",
-        {"status": 200, "body": complete_xml},
+        r"scsanctions\.un\.org/consolidated",
+        {"status": 200, "body": complete_html},
     )
     contract = direct_deploy(CONTRACT)
     case_id = make_case(contract, policy="UN_CONSOLIDATED")
@@ -377,7 +377,7 @@ def test_complete_un_snapshot_can_produce_bounded_no_signal(direct_vm, direct_de
     assert case["stage"] == "SIGNALLED"
     assert case["outcome"] == "NO_MATCH_IN_BOUND_SNAPSHOT"
     assert case["consequence"] == "NO_SIGNAL"
-    assert case["match_narrative"] == "No supplied name, alias, or identifier occurs in the complete bound UN XML snapshot."
+    assert case["match_narrative"] == "No supplied name, alias, or identifier occurs in the complete bound UN HTML publication."
 
 
 def test_validator_rederives_and_rejects_material_disagreement(direct_vm, direct_deploy):

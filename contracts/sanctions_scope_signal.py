@@ -3,13 +3,14 @@
 from genlayer import *
 import hashlib
 import json
+import re
 import unicodedata
 
 
 SOURCE_URLS = {
     "OFAC_SDN": "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.CSV",
     "OFAC_NON_SDN": "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/CONSOLIDATED.CSV",
-    "UN_CONSOLIDATED": "https://scsanctions.un.org/resources/xml/en/name/consolidated.xml",
+    "UN_CONSOLIDATED": "https://scsanctions.un.org/consolidated",
 }
 
 OUTCOMES = (
@@ -77,20 +78,21 @@ def _evidence_windows(normalized_document: str, terms: list[str]) -> list[str]:
 def _is_complete_snapshot(policy: str, body: str) -> bool:
     if policy != "UN_CONSOLIDATED":
         return False
-    upper = (
-        body.upper()
-        .strip()
-        .replace("&AMP;LT;", "<")
-        .replace("&AMP;GT;", ">")
-        .replace("&LT;", "<")
-        .replace("&GT;", ">")
-    )
+    upper = body.upper()
+    for encoded, decoded in (
+        ("&AMP;LT;", "<"),
+        ("&AMP;GT;", ">"),
+        ("&LT;", "<"),
+        ("&GT;", ">"),
+    ):
+        upper = upper.replace(encoded, decoded)
+    upper = " ".join(re.sub(r"<[^>]*>", " ", upper).split())
     return (
         len(body) > 500_000
-        and "<CONSOLIDATED_LIST" in upper[:2_000]
-        and "</CONSOLIDATED_LIST>" in upper
-        and "<INDIVIDUALS>" in upper
-        and "<ENTITIES>" in upper
+        and "UNITED NATIONS SECURITY COUNCIL CONSOLIDATED LIST" in upper[:10_000]
+        and "COMPOSITION OF THE LIST" in upper[:20_000]
+        and "A. INDIVIDUALS" in upper
+        and "B. ENTITIES AND OTHER GROUPS" in upper
     )
 
 
@@ -108,12 +110,6 @@ def _valid_model_result(value: object) -> bool:
 
 
 def _fetch_source(policy: str, source_url: str):
-    if policy == "UN_CONSOLIDATED":
-        rendered = gl.nondet.web.render(source_url, mode="html")
-        if not isinstance(rendered, str):
-            raise ValueError("Rendered official source was not text")
-        body_bytes = rendered.encode("utf-8")
-        return 200, body_bytes, rendered
     response = gl.nondet.web.get(source_url)
     body_bytes = response.body
     body = body_bytes.decode("utf-8")
@@ -337,7 +333,7 @@ class SanctionsScopeSignal(gl.Contract):
                         "consequence": "NO_SIGNAL",
                         "source_digest": digest,
                         "matched_record": "",
-                        "match_narrative": "No supplied name, alias, or identifier occurs in the complete bound UN XML snapshot.",
+                        "match_narrative": "No supplied name, alias, or identifier occurs in the complete bound UN HTML publication.",
                     })
                 return _canonical({
                     "outcome": "UNRESOLVED",
