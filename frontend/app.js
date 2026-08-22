@@ -5,10 +5,10 @@ import {
   assertFinalSuccess,
   bindProviderLifecycle,
   createPendingWriteStore,
-  defaultSnapshotLabel,
   ensureWalletChain,
   executeGuardedWrite,
   extractCreatedCaseId,
+  formatBoundDigestLabel,
   formatError,
   parseCase,
   registerWalletProvider,
@@ -54,8 +54,6 @@ const elements = {
   assess: byId("assess-case"),
   supersedeForm: byId("supersede-form"),
 };
-
-byId("snapshot-label").value = defaultSnapshotLabel();
 
 function notice(message, tone = "info") {
   elements.notice.hidden = !message;
@@ -137,8 +135,8 @@ async function verifyPendingReadback(receipt, _hash, pending) {
   const verified = {
     add_alias: () => record.aliases.includes(args[1]),
     add_identifier: () => record.identifiers.includes(args[1]),
-    freeze_case: () => record.stage === "FROZEN" && record.snapshot_label === args[1],
-    assess_case: () => ["SIGNALLED", "UNRESOLVED"].includes(record.stage),
+    freeze_case: () => record.stage === "FROZEN" && typeof record.frozen_source_digest === "string" && record.frozen_source_digest.length === 64,
+    assess_case: () => ["SIGNALLED", "UNRESOLVED"].includes(record.stage) && typeof record.match_narrative === "string",
     supersede_case: () => record.stage === "SUPERSEDED" && BigInt(record.superseded_by) === BigInt(args[1]),
   }[pending.functionName];
   if (!verified || !verified()) throw new Error("Authoritative state does not match the persisted write intent.");
@@ -193,6 +191,18 @@ function renderCase(caseRecord) {
   byId("case-stage").textContent = caseRecord.stage;
   byId("case-source").textContent = caseRecord.source_policy.replaceAll("_", " ");
   byId("case-source").href = caseRecord.source_url;
+
+  const boundDigestEl = byId("case-bound-digest");
+  if (boundDigestEl) {
+    if (caseRecord.frozen_source_digest) {
+      boundDigestEl.hidden = false;
+      boundDigestEl.textContent = formatBoundDigestLabel(caseRecord.frozen_source_digest);
+    } else {
+      boundDigestEl.hidden = true;
+      boundDigestEl.textContent = "";
+    }
+  }
+
   renderTerms(byId("alias-list"), caseRecord.aliases);
   renderTerms(byId("identifier-list"), caseRecord.identifiers);
 
@@ -201,7 +211,7 @@ function renderCase(caseRecord) {
   if (assessed) {
     byId("case-outcome").textContent = caseRecord.outcome || "—";
     byId("case-consequence").textContent = caseRecord.consequence || "—";
-    byId("case-reason").textContent = caseRecord.reason || "No reasoning was stored.";
+    byId("case-reason").textContent = caseRecord.match_narrative || "No match narrative was stored.";
     byId("case-digest").textContent = caseRecord.source_digest ? `SHA-256 ${caseRecord.source_digest}` : "No source digest available";
   }
 
@@ -395,11 +405,12 @@ elements.identifierForm.addEventListener("submit", async (event) => {
 elements.freezeForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = elements.freezeForm.querySelector("button");
-  const label = byId("snapshot-label").value.trim();
   try {
-    await finalizeWrite("freeze_case", [BigInt(state.case.case_id), label], button, async () => {
+    await finalizeWrite("freeze_case", [BigInt(state.case.case_id)], button, async () => {
       const record = await readCase(BigInt(state.case.case_id));
-      if (record.stage !== "FROZEN" || record.snapshot_label !== label) throw new Error("Frozen boundary was not confirmed by readback.");
+      if (record.stage !== "FROZEN" || !record.frozen_source_digest || record.frozen_source_digest.length !== 64) {
+        throw new Error("Frozen digest boundary was not confirmed by readback.");
+      }
       renderCase(record);
     });
   } catch {}
@@ -409,7 +420,12 @@ elements.assess.addEventListener("click", async () => {
   try {
     await finalizeWrite("assess_case", [BigInt(state.case.case_id)], elements.assess, async () => {
       const record = await readCase(BigInt(state.case.case_id));
-      if (!["SIGNALLED", "UNRESOLVED"].includes(record.stage)) throw new Error("Assessment terminal state was not confirmed by readback.");
+      if (!["SIGNALLED", "UNRESOLVED"].includes(record.stage)) {
+        throw new Error("Assessment terminal state was not confirmed by readback.");
+      }
+      if (typeof record.match_narrative !== "string") {
+        throw new Error("Stored match narrative was not confirmed by readback.");
+      }
       renderCase(record);
     });
   } catch {}

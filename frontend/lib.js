@@ -3,6 +3,14 @@ export const SUCCESS_RESULT = "FINISHED_WITH_RETURN";
 const FINAL_STATUS_CODE = 7;
 const SUCCESS_RESULT_CODE = 1;
 
+export function formatBoundDigestLabel(digest) {
+  if (!digest || typeof digest !== "string") return "";
+  const trimmed = digest.trim();
+  if (!trimmed) return "";
+  const short = trimmed.length > 16 ? `${trimmed.slice(0, 16)}…` : trimmed;
+  return `Official publication bound · SHA-256 ${short}`;
+}
+
 export function defaultSnapshotLabel(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

@@ -9,6 +9,7 @@ import {
   ensureWalletChain,
   executeGuardedWrite,
   extractCreatedCaseId,
+  formatBoundDigestLabel,
   formatError,
   parseCase,
   registerWalletProvider,
@@ -16,7 +17,13 @@ import {
   walletProviderAliases,
 } from "./lib.js";
 
-test("prefills an editable snapshot label from the browser-local date", () => {
+test("formats an authoritative digest-based label from the bound SHA-256", () => {
+  assert.equal(
+    formatBoundDigestLabel("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
+    "Official publication bound · SHA-256 e3b0c44298fc1c14…"
+  );
+  assert.equal(formatBoundDigestLabel(""), "");
+  assert.equal(formatBoundDigestLabel(null), "");
   assert.equal(defaultSnapshotLabel(new Date(2026, 7, 13)), "Publication observed 2026-08-13");
 });
 
@@ -85,7 +92,7 @@ test("decodes a transaction-specific case id and never falls back to a count", (
 
 test("rejects malformed contract readback", () => {
   assert.throws(() => parseCase("{}"), /schema/);
-  assert.equal(parseCase(JSON.stringify({
+  const parsed = parseCase(JSON.stringify({
     case_id: 1,
     owner: "0x1",
     legal_name: "Northwind",
@@ -93,8 +100,16 @@ test("rejects malformed contract readback", () => {
     identifiers: [],
     source_policy: "OFAC_SDN",
     source_url: "https://example.invalid",
+    frozen_source_digest: "",
     stage: "DRAFT",
-  })).case_id, 1);
+    outcome: "",
+    consequence: "",
+    source_digest: "",
+    matched_record: "",
+    match_narrative: "",
+    superseded_by: 0,
+  }));
+  assert.equal(parsed.case_id, 1);
 });
 
 test("error formatting is bigint-safe", () => {
@@ -195,7 +210,7 @@ test("persists intent and hash across timeout, then reconciles without replay", 
 test("keeps failed-final and delayed-readback writes locked", async () => {
   for (const failure of ["receipt", "readback"]) {
     const store = createPendingWriteStore(memoryStorage(), failure);
-    const intent = { contractAddress: "0xabc", account: "0xowner", functionName: "freeze_case", args: serializeWriteArgs([1n, "Snapshot"]) };
+    const intent = { contractAddress: "0xabc", account: "0xowner", functionName: "freeze_case", args: serializeWriteArgs([1n]) };
     await assert.rejects(() => executeGuardedWrite({
       store,
       intent,
@@ -223,7 +238,7 @@ test("keeps rollback, error, malformed, and validator-only receipts locked", asy
     let readbacks = 0;
     await assert.rejects(() => executeGuardedWrite({
       store,
-      intent: { contractAddress: "0xabc", account: "0xowner", functionName: "freeze_case", args: [1, "Snapshot"] },
+      intent: { contractAddress: "0xabc", account: "0xowner", functionName: "freeze_case", args: [1] },
       submit: async () => "0xhash",
       waitForReceipt: async () => receipt,
       validateReceipt: assertFinalSuccess,
@@ -277,4 +292,18 @@ test("invalidates stale clients for account, chain, and disconnect lifecycle eve
   assert.deepEqual(invalidations, ["accountsChanged", "chainChanged", "disconnect"]);
   detach();
   assert.equal(removed.length, 3);
+});
+
+test("frontend code does not require user snapshot label and uses 1-arg freeze_case", async () => {
+  const appSource = await readFile(new URL("./app.js", import.meta.url), "utf8");
+  const htmlSource = await readFile(new URL("./index.html", import.meta.url), "utf8");
+
+  // freeze_case in app.js is called with [BigInt(state.case.case_id)]
+  assert.match(appSource, /finalizeWrite\("freeze_case",\s*\[BigInt\(state\.case\.case_id\)\]/);
+  // HTML does not require a snapshot-label input
+  assert.doesNotMatch(htmlSource, /id="snapshot-label"/);
+  // app verifies frozen_source_digest
+  assert.match(appSource, /record\.frozen_source_digest/);
+  // app renders match_narrative
+  assert.match(appSource, /record\.match_narrative/);
 });

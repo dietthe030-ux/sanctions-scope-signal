@@ -54,11 +54,11 @@
       <section class="workflow" aria-labelledby="workflow-title">
         <div class="section-head">
           <h2 id="workflow-title">The record advances only when its evidence does.</h2>
-          <p>Draft terms remain editable. Freezing locks the source policy and snapshot label. Assessment is the first nondeterministic step.</p>
+          <p>Draft terms remain editable. Freezing binds the immutable official source digest. Assessment validates the current publication against the frozen digest.</p>
         </div>
         <ol class="steps">
           <li><span>01</span><div><h3>Define</h3><p>Name one organization and choose one source policy.</p></div></li>
-          <li><span>02</span><div><h3>Bind</h3><p>Add aliases and identifiers, then freeze the snapshot label.</p></div></li>
+          <li><span>02</span><div><h3>Bind</h3><p>Add aliases and identifiers, then freeze the official publication digest.</p></div></li>
           <li><span>03</span><div><h3>Validate</h3><p>Independent validators fetch the source and re-derive material fields.</p></div></li>
           <li><span>04</span><div><h3>Read back</h3><p>The client trusts only finalized execution plus authoritative contract state.</p></div></li>
         </ol>
@@ -103,6 +103,7 @@
                 <p class="mono" id="case-number">CASE —</p>
                 <h3 id="case-name">No case loaded</h3>
                 <a class="source-link" id="case-source" href="#" target="_blank" rel="noreferrer">Official source</a>
+                <p class="bound-digest mono" id="case-bound-digest" hidden></p>
               </div>
               <span class="stage-chip" id="case-stage">—</span>
             </header>
@@ -128,13 +129,13 @@
                 <div><h4>Identifiers</h4><ul id="identifier-list"></ul></div>
               </div>
               <form id="freeze-form" class="freeze-form">
-                <label class="field"><span>Snapshot label</span><input id="snapshot-label" minlength="3" maxlength="120" required placeholder="Publication observed YYYY-MM-DD"></label>
+                <p class="field-note">Freezing nondeterministically fetches the official publication and binds its immutable SHA-256 digest on-chain.</p>
                 <button class="button button--primary" type="submit">Freeze evidence boundary</button>
               </form>
             </div>
 
             <div class="assessment-action" id="assessment-action" hidden>
-              <p>The source policy and snapshot label are frozen. Assessment may take several minutes while validators fetch and compare evidence.</p>
+              <p>The official publication digest is frozen on-chain. Assessment may take several minutes while validators fetch and compare evidence.</p>
               <button class="button button--primary" id="assess-case" type="button">Assess frozen case</button>
             </div>
 

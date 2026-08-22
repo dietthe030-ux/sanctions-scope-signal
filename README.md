@@ -10,7 +10,7 @@ An organization-only GenLayer PROJECT that binds a sanctions-screening case to o
 
 ## Trust problem
 
-A case owner can provide an organization's name and identifiers, but must not be able to supply or silently manipulate the verdict. Public lists can also be unavailable, incomplete, or change while validators are evaluating them. This project therefore treats the submitted subject, the selected official-source policy, the snapshot label, and the fetched evidence as separate trust boundaries.
+A case owner can provide an organization's name and identifiers, but must not be able to supply or silently manipulate the verdict. Public lists can also be unavailable, incomplete, or change while validators are evaluating them. This project therefore treats the submitted subject, the selected official-source policy, the frozen publication digest, and the fetched evidence as separate trust boundaries.
 
 It is not legal advice, KYC/AML clearance, an enforcement decision, or a payment product.
 
@@ -32,8 +32,8 @@ OFAC absence remains `UNRESOLVED`: its CSV response does not expose a durable co
 
 1. Connect through the explicit supported-provider chooser; the app never auto-selects MetaMask.
 2. Create a case with the organization's legal name and source policy.
-3. Add public aliases and identifiers, then freeze the case with a snapshot label.
-4. Request assessment. Validators fetch and evaluate the official source under Normal consensus.
+3. Add public aliases and identifiers, then freeze the case to bind the immutable official publication digest.
+4. Request assessment. Validators fetch and evaluate the official source under Normal consensus, checking the current digest against the frozen digest.
 5. Wait for `FINALIZED`, require successful leader execution, and verify the authoritative case readback.
 6. If the official publication changes, create a newer assessed case and supersede the earlier record without rewriting history.
 
@@ -53,7 +53,7 @@ The case owner may call `create_case`, `add_alias`, `add_identifier`, `freeze_ca
 
 `DRAFT -> FROZEN -> SIGNALLED | UNRESOLVED -> SUPERSEDED`
 
-The validator compares the leader's source policy, source URL, snapshot, digest, match, outcome, consequence, and reason against an independent derivation. Supersession requires a newer, assessed, current case owned by the same account. The contract has no token, payment, stake, reward, or economic value path.
+The validator compares the leader's outcome, consequence, source_digest, matched_record, and match_narrative against an independent derivation. Supersession requires a newer, assessed, current case owned by the same account. The contract has no token, payment, stake, reward, or economic value path.
 
 ## Transaction lifecycle
 
@@ -83,7 +83,7 @@ $env:VITE_CONTRACT_ADDRESS='0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26'
 npm run build
 ```
 
-Current release evidence: GenVM semantic/schema checks pass for the unchanged deployed contract; Python `20/20`; frontend `15/15`; production build passes. The frontend regressions cover EIP-6963/legacy deduplication, provider-native Studionet switch/add/readback without MetaMask Snap APIs, disconnected startup on every reload until the user opens the selector, fail-closed receipt-envelope reconciliation, and automatic editable snapshot labeling. See [verification](docs/VERIFICATION.md).
+Current release evidence: GenVM semantic/schema checks pass for the unchanged deployed contract; Python `29/29`; frontend `16/16`; production build passes. The frontend regressions cover EIP-6963/legacy deduplication, provider-native Studionet switch/add/readback without MetaMask Snap APIs, disconnected startup on every reload until the user opens the selector, fail-closed receipt-envelope reconciliation, and automatic official publication digest binding. See [verification](docs/VERIFICATION.md).
 
 ## Deployment
 

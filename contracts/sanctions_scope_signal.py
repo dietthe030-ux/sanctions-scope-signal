@@ -94,8 +94,9 @@ def _valid_model_result(value: object) -> bool:
         value.get("outcome") in OUTCOMES
         and value.get("consequence") in ("HOLD", "ESCALATE", "UNRESOLVED")
         and isinstance(value.get("matched_record"), str)
-        and isinstance(value.get("reason"), str)
-        and len(value.get("reason", "")) <= 900
+        and isinstance(value.get("match_narrative"), str)
+        and len(value.get("matched_record", "")) <= 240
+        and len(value.get("match_narrative", "")) <= 900
     )
 
 
@@ -142,13 +143,13 @@ class SanctionsScopeSignal(gl.Contract):
                 "identifiers": [],
                 "source_policy": source_policy,
                 "source_url": SOURCE_URLS[source_policy],
-                "snapshot_label": "",
+                "frozen_source_digest": "",
                 "stage": "DRAFT",
                 "outcome": "",
                 "consequence": "",
                 "source_digest": "",
                 "matched_record": "",
-                "reason": "",
+                "match_narrative": "",
                 "superseded_by": 0,
             },
         )
@@ -187,14 +188,68 @@ class SanctionsScopeSignal(gl.Contract):
         self._save(case_id, case)
 
     @gl.public.write
-    def freeze_case(self, case_id: u256, snapshot_label: str) -> None:
+    def freeze_case(self, case_id: u256) -> None:
         case = self._load(case_id)
         self._require_owner(case)
         if case["stage"] != "DRAFT":
             raise gl.vm.UserError("Only a DRAFT case can be frozen")
-        if len(snapshot_label.strip()) < 3 or len(snapshot_label) > 120:
-            raise gl.vm.UserError("Snapshot label must contain 3 to 120 characters")
-        case["snapshot_label"] = snapshot_label.strip()
+
+        source_url = case["source_url"]
+
+        def fetch_freeze_source() -> str:
+            try:
+                response = gl.nondet.web.get(source_url)
+                status_code = response.status_code
+                body_bytes = response.body
+                body = body_bytes.decode("utf-8")
+            except Exception:
+                return _canonical({
+                    "valid": False,
+                    "digest": "",
+                    "error": "The official source could not be fetched or decoded.",
+                })
+
+            if not isinstance(body_bytes, (bytes, bytearray)) or len(body_bytes) == 0:
+                return _canonical({
+                    "valid": False,
+                    "digest": "",
+                    "error": "The official source response was empty or missing.",
+                })
+
+            if status_code != 200 or len(body) < 100:
+                return _canonical({
+                    "valid": False,
+                    "digest": "",
+                    "error": "The official source response was unavailable or too short.",
+                })
+
+            digest = hashlib.sha256(body_bytes).hexdigest()
+            return _canonical({
+                "valid": True,
+                "digest": digest,
+                "error": "",
+            })
+
+        def validate_freeze(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            try:
+                leader = json.loads(leader_result.calldata)
+                validator = json.loads(fetch_freeze_source())
+            except Exception:
+                return False
+            return (
+                leader.get("valid") is True
+                and validator.get("valid") is True
+                and bool(leader.get("digest"))
+                and leader.get("digest") == validator.get("digest")
+            )
+
+        agreed = json.loads(gl.vm.run_nondet_unsafe(fetch_freeze_source, validate_freeze))
+        if not agreed.get("valid") or not agreed.get("digest"):
+            raise gl.vm.UserError("Official source is unavailable or invalid; case cannot be frozen")
+
+        case["frozen_source_digest"] = agreed["digest"]
         case["stage"] = "FROZEN"
         self._save(case_id, case)
 
@@ -210,21 +265,30 @@ class SanctionsScopeSignal(gl.Contract):
         identifiers = list(case["identifiers"])
         policy = case["source_policy"]
         source_url = case["source_url"]
-        snapshot_label = case["snapshot_label"]
+        frozen_source_digest = case["frozen_source_digest"]
 
         def evaluate_source() -> str:
             try:
                 response = gl.nondet.web.get(source_url)
                 status_code = response.status_code
                 body_bytes = response.body
-                body = body_bytes.decode("utf-8", errors="replace")
+                body = body_bytes.decode("utf-8")
             except Exception:
                 return _canonical({
                     "outcome": "UNRESOLVED",
                     "consequence": "UNRESOLVED",
                     "source_digest": "",
                     "matched_record": "",
-                    "reason": "The official source could not be fetched or decoded.",
+                    "match_narrative": "The official source could not be fetched or decoded.",
+                })
+
+            if not isinstance(body_bytes, (bytes, bytearray)) or len(body_bytes) == 0:
+                return _canonical({
+                    "outcome": "UNRESOLVED",
+                    "consequence": "UNRESOLVED",
+                    "source_digest": "",
+                    "matched_record": "",
+                    "match_narrative": "The official source response was empty or missing.",
                 })
 
             digest = hashlib.sha256(body_bytes).hexdigest()
@@ -234,7 +298,16 @@ class SanctionsScopeSignal(gl.Contract):
                     "consequence": "UNRESOLVED",
                     "source_digest": digest,
                     "matched_record": "",
-                    "reason": "The official source response was unavailable or too short.",
+                    "match_narrative": "The official source response was unavailable or too short.",
+                })
+
+            if digest != frozen_source_digest:
+                return _canonical({
+                    "outcome": "UNRESOLVED",
+                    "consequence": "UNRESOLVED",
+                    "source_digest": digest,
+                    "matched_record": "",
+                    "match_narrative": "The current official source digest does not match the frozen publication digest.",
                 })
 
             normalized_document = _normalize_document(body)
@@ -249,14 +322,14 @@ class SanctionsScopeSignal(gl.Contract):
                         "consequence": "NO_SIGNAL",
                         "source_digest": digest,
                         "matched_record": "",
-                        "reason": "No supplied name, alias, or identifier occurs in the complete bound UN XML snapshot.",
+                        "match_narrative": "No supplied name, alias, or identifier occurs in the complete bound UN XML snapshot.",
                     })
                 return _canonical({
                     "outcome": "UNRESOLVED",
                     "consequence": "UNRESOLVED",
                     "source_digest": digest,
                     "matched_record": "",
-                    "reason": "No term was found, but exhaustive snapshot coverage could not be proven.",
+                    "match_narrative": "No term was found, but exhaustive snapshot coverage could not be proven.",
                 })
 
             terms = identifier_hits + name_hits
@@ -266,7 +339,7 @@ You are classifying an organization-only sanctions screening signal from officia
 This is not legal advice and not KYC/AML clearance.
 
 Bound source policy: {policy}
-Bound snapshot label: {snapshot_label}
+Frozen source digest: {frozen_source_digest}
 Organization legal name: {legal_name}
 Aliases: {aliases}
 Identifiers: {identifiers}
@@ -286,7 +359,7 @@ Return one JSON object with exactly these keys:
 outcome: one of CONFIRMED_IDENTIFIER_MATCH, PROBABLE_ALIAS_MATCH, AMBIGUOUS, UNRESOLVED
 consequence: HOLD, ESCALATE, or UNRESOLVED according to the rules
 matched_record: a compact source-grounded record label, at most 240 characters
-reason: a source-grounded explanation, at most 900 characters
+match_narrative: a source-grounded explanation, at most 900 characters
 """
             try:
                 model_result = gl.nondet.exec_prompt(prompt, response_format="json")
@@ -299,7 +372,7 @@ reason: a source-grounded explanation, at most 900 characters
                     "consequence": "UNRESOLVED",
                     "source_digest": digest,
                     "matched_record": "",
-                    "reason": "The model response was missing or malformed.",
+                    "match_narrative": "The model response was missing or malformed.",
                 })
 
             allowed = {
@@ -328,7 +401,7 @@ reason: a source-grounded explanation, at most 900 characters
                 "consequence": consequence,
                 "source_digest": digest,
                 "matched_record": model_result["matched_record"][:240] if outcome != "UNRESOLVED" else "",
-                "reason": model_result["reason"][:900] if outcome != "UNRESOLVED" else "The model decision failed deterministic policy checks.",
+                "match_narrative": model_result["match_narrative"][:900] if outcome != "UNRESOLVED" else "The model decision failed deterministic policy checks.",
             })
 
         def validate_source(leader_result) -> bool:
@@ -339,7 +412,7 @@ reason: a source-grounded explanation, at most 900 characters
                 validator = json.loads(evaluate_source())
             except Exception:
                 return False
-            material_fields = ("outcome", "consequence", "source_digest")
+            material_fields = ("outcome", "consequence", "source_digest", "matched_record", "match_narrative")
             return all(leader.get(field) == validator.get(field) for field in material_fields)
 
         agreed = json.loads(gl.vm.run_nondet_unsafe(evaluate_source, validate_source))
@@ -347,7 +420,7 @@ reason: a source-grounded explanation, at most 900 characters
         case["consequence"] = agreed["consequence"]
         case["source_digest"] = agreed["source_digest"]
         case["matched_record"] = agreed["matched_record"]
-        case["reason"] = agreed["reason"]
+        case["match_narrative"] = agreed["match_narrative"]
         case["stage"] = "UNRESOLVED" if agreed["outcome"] == "UNRESOLVED" else "SIGNALLED"
         self._save(case_id, case)
 
