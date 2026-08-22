@@ -2,16 +2,16 @@
 
 ## Revision and deployment
 
-- Contract source commit: `d7e84586350d6b138816028e64434094ff9c9ea0`
-- Contract SHA-256, normalized LF: `7ae251722ac26f2dd86fae4c49d805d5a64db0de6c57b264b1059b27c3153343`
+- Contract source commit: `e258587924c37b918f84f6da0d908c39b1138353`
+- Contract SHA-256, normalized LF: `12492b055f5088ecd81134d8a4b6976414aa23cb464b9b0adf17e100a83888d4`
 - Network: Studionet, chain `61999`
-- Contract: `0x01156000d8a28c10AA1EDdD42941cc5b125c208E`
-- [Explorer](https://explorer-studio.genlayer.com/address/0x01156000d8a28c10AA1EDdD42941cc5b125c208E)
-- [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x68a9828d9f1a978ec57e7d8088883033f5b6d0065b920359e697227f653ab2ba)
+- Contract: `0x863792B0747948d37dEb6441b78653c01357de1F`
+- [Explorer](https://explorer-studio.genlayer.com/address/0x863792B0747948d37dEb6441b78653c01357de1F)
+- [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x9ef458b4a0d93c51071d518be7594aa1c1449a4a05549e610eee80e52e927f9b)
 - [Live app](https://sanctions-scope-signal.vercel.app)
 - Deployment: `FINALIZED`, successful leader execution, Normal consensus, five agreeing votes.
 - Deployed-source parity: RPC `gen_getContractCode`, normalized to LF, returns the exact source hash above.
-- Upgrader readback: `0x2e53bb6ED175A7F827590D9D3a353FC51Eb8996a`.
+- Upgrader readback: `0xBf90Af1bc61314775d57B641b89c1f702a93b40D`.
 - Features: Automatic immutable official-source digest binding (`frozen_source_digest`) at freeze time, 5-field validator consensus (`outcome`, `consequence`, `source_digest`, `matched_record`, `match_narrative`), and zero manual snapshot-label authority.
 
 The final public commit and live Vercel artifact hashes are recorded in the immutable final release evidence after hosting verification, avoiding a self-referential tracked-file hash. The stable production URL serves the reviewed frontend with the exact Studionet contract configuration.
@@ -24,7 +24,7 @@ genvm-lint check contracts\sanctions_scope_signal.py --json
 genvm-lint schema contracts\sanctions_scope_signal.py --json
 py -3.13 -m pytest tests -q --cache-clear
 npm test
-$env:VITE_CONTRACT_ADDRESS='0x01156000d8a28c10AA1EDdD42941cc5b125c208E'
+$env:VITE_CONTRACT_ADDRESS='0x863792B0747948d37dEb6441b78653c01357de1F'
 npm run build
 ```
 
@@ -40,11 +40,11 @@ Results on the release candidate:
 
 The primary deployment and all application business writes ran in Normal consensus and were submitted only after the preceding transaction reached `FINALIZED`. The separate platform-level upgrade rehearsal reports `execution_mode: NORMAL` together with the legacy RPC field `leader_only: true` and no validator consensus receipts, so it is recorded only as authorization/source/storage recovery evidence—not as a Full Consensus business call.
 
-### Current release deployment (0x01156000d8a28c10AA1EDdD42941cc5b125c208E)
+### Current release deployment (0x863792B0747948d37dEb6441b78653c01357de1F)
 
 | Path | Transaction | Verified result |
 | --- | --- | --- |
-| Deploy corrected contract | `0x68a9828d9f1a978ec57e7d8088883033f5b6d0065b920359e697227f653ab2ba` | `FINALIZED`; source/upgrader parity; automatic immutable digest binding |
+| Deploy corrected contract | `0x9ef458b4a0d93c51071d518be7594aa1c1449a4a05549e610eee80e52e927f9b` | `FINALIZED`; source/upgrader parity; official UN HTML transport correction |
 
 ### Historical proof matrix (Superseded initial contract: 0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26)
 
