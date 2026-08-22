@@ -39,7 +39,7 @@ Results on the release candidate:
 
 ## Live proof matrix
 
-The primary deployment and all application business writes ran in Normal consensus and were submitted only after the preceding transaction reached `FINALIZED`. The separate platform-level upgrade rehearsal reports `execution_mode: NORMAL` together with the legacy RPC field `leader_only: true` and no validator consensus receipts, so it is recorded only as authorization/source/storage recovery evidence—not as a Full Consensus business call.
+The primary deployment, application writes, authorized rehearsal upgrade, and rejection probes ran in Normal consensus and were submitted only after the preceding consequential transaction reached `FINALIZED`. The authorized rehearsal upgrade was `leader_only: false`, reached `MAJORITY_AGREE` with three agree and two idle votes, and preserved authoritative storage/upgrader readback.
 
 ### Current release deployment (0x1d4bc527d5747044A5CC8fCE8EB91e193742b4d6)
 
@@ -60,6 +60,7 @@ The primary deployment and all application business writes ran in Normal consens
 | Deploy exact-source upgrade rehearsal | `0xe45613dead88f69b3dff979f195e0e0fbd4db020ce777f9ec248a45db851625b` | `FINALIZED`; rehearsal `0xeeC77C03541D0d405b16aeCB29c5043Ae3090aF6` |
 | Create rehearsal storage probe | `0x875c9991137a83bb2ea46d3e3042d33f2ec84e7020f239947af32270ac7dc567` | `FINALIZED`; case count and case 1 readable before upgrade |
 | Authorized compatible rehearsal upgrade | `0xae36441e8392043d57cb4dd742ab96fb2d2219d13fe36da34442b216ac4909f7` | `FINALIZED`; source changed only on rehearsal; case count, case JSON, and sole upgrader preserved |
+| Reject unauthorized rehearsal upgrade | `0xdba3eca4f80d146c37f586457e40b4d534a7b69f1cd7df7b5a4741be5e067820` | `FINALIZED`; leader/validators rejected forbidden code-slot write; case count `1` and sole upgrader unchanged |
 
 ### Historical proof matrix (Superseded initial contract: 0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26)
 
@@ -80,6 +81,6 @@ The live assessment preserved the submitted organization, alias, identifier, sou
 
 ## Known limits
 
-- The unauthorized upgrade probe was rejected by Studio before transaction submission, so it has no Explorer transaction.
+- The current unauthorized-upgrader probe is the finalized rehearsal transaction recorded above. Historical pre-submission rejection evidence applies only to the superseded deployment.
 - The stable live URL, production ownership, and compiled-asset parity were verified at the hosting checkpoint; generated deployment identifiers remain in the immutable final evidence rather than this source commit.
 - The product remains a Studionet prototype and not a production compliance determination.

@@ -49,6 +49,10 @@ storage probe was created, authorized transaction
 `0xae36441e8392043d57cb4dd742ab96fb2d2219d13fe36da34442b216ac4909f7` installed a
 linted storage-compatible recovery surface. Authoritative readback preserved case count `1`, the exact
 case JSON, and sole upgrader `0xf5C6…03Fc`. The primary release deployment was not modified.
+Unauthorized account `0x4587…6607` then submitted the same recovery payload in transaction
+`0xdba3eca4f80d146c37f586457e40b4d534a7b69f1cd7df7b5a4741be5e067820`; execution
+failed with a forbidden code-slot write. Final readback still returned case count `1` and sole upgrader
+`0xf5C6…03Fc`.
 
 ## Required live verification
 
