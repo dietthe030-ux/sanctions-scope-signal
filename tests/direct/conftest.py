@@ -82,7 +82,7 @@ class RootAccessor:
 
 class Response:
     def __init__(self, status, body, headers=None):
-        self.status_code = status
+        self.status = status
         self.body = body.encode("utf-8") if isinstance(body, str) else body
         self.headers = headers or {}
 

@@ -125,7 +125,7 @@ def _fetch_source(policy: str, source_url: str):
         response = gl.nondet.web.get(source_url)
         body_bytes = response.body
         body = body_bytes.decode("utf-8")
-        return response.status_code, body_bytes, body
+        return response.status, body_bytes, body
 
     chunks = []
     start = 0
@@ -140,7 +140,7 @@ def _fetch_source(policy: str, source_url: str):
             r"bytes (\d+)-(\d+)/(\d+)",
             _response_header(response, "Content-Range").strip(),
         )
-        if response.status_code != 206 or match is None:
+        if response.status != 206 or match is None:
             raise ValueError("Official source did not honor the required byte range")
 
         returned_start, returned_end, returned_total = (int(item) for item in match.groups())
