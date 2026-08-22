@@ -123,7 +123,10 @@ export function assertFinalSuccess(receipt) {
     || (leader?.result && typeof leader.result === "object" && leader.result.status !== "return")
   ));
   const failedLeaderExecution = leaderExecutions.some((execution) => execution !== "SUCCESS");
-  if (conflictingLeader || failedLeaderExecution || executions.some((execution) => execution !== SUCCESS_RESULT) || (!executions.length && !successfulLeader && !explicitSuccessfulLeader)) {
+  if (executions.length && executions.every((execution) => execution === SUCCESS_RESULT)) {
+    return receipt;
+  }
+  if (conflictingLeader || failedLeaderExecution || executions.some((execution) => execution !== SUCCESS_RESULT) || (!successfulLeader && !explicitSuccessfulLeader)) {
     throw new Error(`Leader execution is ${executions.join("/") || leaderExecutions.join("/") || "UNKNOWN"}; no state change is trusted.`);
   }
   return receipt;

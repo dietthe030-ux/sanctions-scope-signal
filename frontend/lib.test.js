@@ -49,6 +49,11 @@ test("accepts named and numeric FINALIZED successful execution only", () => {
   assert.doesNotThrow(() => assertFinalSuccess({ status_name: "FINALIZED", tx_execution_result: "1" }));
   assert.doesNotThrow(() => assertFinalSuccess({
     status: 7,
+    txExecutionResultName: "FINISHED_WITH_RETURN",
+    consensus_data: { leader_receipt: [{ execution_result: "ERROR", result: { status: "contract_error" } }] },
+  }));
+  assert.doesNotThrow(() => assertFinalSuccess({
+    status: 7,
     consensus_data: { leader_receipt: [{ result: { status: "return", payload: { readable: "2" } } }] },
   }));
   assert.doesNotThrow(() => assertFinalSuccess({
