@@ -97,7 +97,10 @@ export function assertFinalSuccess(receipt) {
     receipt?.tx_execution_result,
   ]
     .filter((value) => value !== undefined && value !== null)
-    .map((value) => value === SUCCESS_RESULT || value === "SUCCESS" || Number(value) === SUCCESS_RESULT_CODE ? SUCCESS_RESULT : String(value));
+    .map((value) => {
+      const text = String(value);
+      return text === SUCCESS_RESULT || text === "SUCCESS" || Number(value) === SUCCESS_RESULT_CODE ? SUCCESS_RESULT : text;
+    });
   if (!statuses.length || statuses.some((status) => status !== FINAL_STATUS)) {
     throw new Error(`Transaction stopped at ${statuses.join("/") || "UNKNOWN"}; FINALIZED is required.`);
   }
