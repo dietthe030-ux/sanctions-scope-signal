@@ -26,12 +26,12 @@ deployment.
 | Classification | `UPGRADABLE` |
 | Linked contracts | none |
 | Configuration transactions | none |
-| Contract address | `0x863792B0747948d37dEb6441b78653c01357de1F` |
-| Deployment transaction | `0x9ef458b4a0d93c51071d518be7594aa1c1449a4a05549e610eee80e52e927f9b` |
-| Explorer | `https://explorer-studio.genlayer.com/address/0x863792B0747948d37dEb6441b78653c01357de1F` |
-| Exact source commit | `e258587924c37b918f84f6da0d908c39b1138353` |
-| Contract SHA-256, normalized LF | `12492b055f5088ecd81134d8a4b6976414aa23cb464b9b0adf17e100a83888d4` |
-| Studio deployer/upgrader | `0xBf90Af1bc61314775d57B641b89c1f702a93b40D` |
+| Contract address | `0x1d4bc527d5747044A5CC8fCE8EB91e193742b4d6` |
+| Deployment transaction | `0x44110079da0ca8b7ae3ce3065565171376f21c7aea09ecc01ec65e0af6263291` |
+| Explorer | `https://explorer-studio.genlayer.com/address/0x1d4bc527d5747044A5CC8fCE8EB91e193742b4d6` |
+| Exact source commit | `4d65ae51b2375db5d35327f262a7d3e267bc143d` |
+| Contract SHA-256 | `b56d3c8cdbdf502137f793c069a0d1dfdab9000ae8f9efc229873f9d5c7c1d90` |
+| Studio deployer/upgrader | `0xf5C66e5155a62E27047aD4ccE729593D6B9c03Fc` |
 
 ### Superseded historical deployment (Reference)
 
@@ -39,9 +39,16 @@ deployment.
 | --- | --- |
 | Historical contract address | `0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26` |
 | Historical deployment transaction | `0x00e83a6e97e5495f185d67612f3555e5f999e24c7da350c423e4627bacbab926` |
-| Note | Superseded by `0x863792B0747948d37dEb6441b78653c01357de1F` after live source-transport remediation. |
+| Note | Superseded by the current range-verified deployment after live source-transport remediation. |
 
 No private key, password, token, seed phrase, or Studio credential belongs in this repository.
+
+The current exact-source rehearsal deployment is `0xeeC77C03541D0d405b16aeCB29c5043Ae3090aF6`
+(`0xe45613dead88f69b3dff979f195e0e0fbd4db020ce777f9ec248a45db851625b`). After a
+storage probe was created, authorized transaction
+`0xae36441e8392043d57cb4dd742ab96fb2d2219d13fe36da34442b216ac4909f7` installed a
+linted storage-compatible recovery surface. Authoritative readback preserved case count `1`, the exact
+case JSON, and sole upgrader `0xf5C6…03Fc`. The primary release deployment was not modified.
 
 ## Required live verification
 
