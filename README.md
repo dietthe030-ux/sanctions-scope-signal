@@ -57,7 +57,7 @@ The validator compares the leader's outcome, consequence, source_digest, matched
 
 ## Transaction lifecycle
 
-Before submission, the frontend persists the contract, account, function, and exact serialized arguments. It then stores the returned transaction hash, waits for `FINALIZED`, requires `FINISHED_WITH_RETURN`, and performs function-specific readback. A timeout, reload, delayed readback, or provider lifecycle event keeps the original intent locked and never automatically replays it. Only an explicit EIP-1193 rejection code `4001` clears a pre-submission intent.
+Before submission, the frontend persists the contract, account, function, and exact serialized arguments. It then stores the returned transaction hash, waits for `FINALIZED`, requires an explicit successful top-level or leader execution result (`FINISHED_WITH_RETURN` or the live SDK `SUCCESS` equivalent), and performs function-specific readback. Any explicit failure overrides a conflicting success field. A timeout, reload, delayed readback, or provider lifecycle event keeps the original intent locked and never automatically replays it. Only an explicit EIP-1193 rejection code `4001` clears a pre-submission intent.
 
 ## Run locally
 
@@ -83,7 +83,7 @@ $env:VITE_CONTRACT_ADDRESS='0x1d4bc527d5747044A5CC8fCE8EB91e193742b4d6'
 npm run build
 ```
 
-Current release evidence: GenVM semantic/schema checks pass for the exact deployed contract; Python `31/31`; frontend `16/16`; production build passes. The frontend regressions cover EIP-6963/legacy deduplication, provider-native Studionet switch/add/readback without MetaMask Snap APIs, disconnected startup on every reload until the user opens the selector, fail-closed receipt-envelope reconciliation, automatic official publication digest binding, and zero manual snapshot-label authority. See [verification](docs/VERIFICATION.md).
+Current release evidence: GenVM semantic/schema checks pass for the exact deployed contract; Python `31/31`; frontend `17/17`; production build passes. The frontend regressions cover EIP-6963/legacy deduplication, provider-native Studionet switch/add/readback without MetaMask Snap APIs, disconnected startup on every reload until the user opens the selector, fail-closed receipt-envelope reconciliation including hostile conflicting execution fields, automatic official publication digest binding, and zero manual snapshot-label authority. See [verification](docs/VERIFICATION.md).
 
 ## Deployment
 

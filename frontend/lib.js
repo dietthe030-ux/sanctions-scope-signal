@@ -130,8 +130,9 @@ export function assertFinalSuccess(receipt) {
     || (leader?.result && typeof leader.result === "object" && leader.result.status !== "return")
   ));
   const failedLeaderExecution = leaderExecutions.some((execution) => execution !== SUCCESS_RESULT);
-  if (executions.length && executions.every((execution) => execution === SUCCESS_RESULT)) {
-    return receipt;
+  if (executions.length) {
+    if (executions.every((execution) => execution === SUCCESS_RESULT)) return receipt;
+    throw new Error(`Leader execution is ${executions.join("/")}; no state change is trusted.`);
   }
   if (explicitSuccessfulLeader) return receipt;
   if (conflictingLeader || failedLeaderExecution || executions.some((execution) => execution !== SUCCESS_RESULT) || (!successfulLeader && !explicitSuccessfulLeader)) {

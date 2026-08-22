@@ -83,7 +83,7 @@ Before submission, the frontend persists the account, contract, function, exact 
 Once returned, the transaction hash is added to the same local record. A timeout, reload, provider event,
 or delayed readback leaves that record locked: the frontend reconciles the original hash and never emits a
 replacement transaction automatically. It clears the record only after `FINALIZED`,
-`FINISHED_WITH_RETURN`, and function-specific authoritative readback all succeed. A wallet rejection with
+an explicit successful top-level or leader execution result (`FINISHED_WITH_RETURN` or normalized live `SUCCESS`), and function-specific authoritative readback all succeed. Any explicit failure takes precedence over a conflicting success field. A wallet rejection with
 EIP-1193 code `4001` is the only automatically recognized pre-submission failure.
 
 If a provider reports `accountsChanged`, `chainChanged`, or `disconnect`, the write client is discarded.

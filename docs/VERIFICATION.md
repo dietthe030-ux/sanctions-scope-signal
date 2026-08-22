@@ -34,7 +34,7 @@ Results on the release candidate:
 - GenVM AST and SDK semantic validation: pass; 11 public methods.
 - GenVM schema extraction: pass; 4 view and 7 write methods.
 - Python: 31 passed (29 direct lifecycle/evidence regressions + 2 GenVM preflight).
-- Frontend: 16 passed, including duplicate-provider, non-MetaMask Studionet connection, reload-required reconnection, rollback/error/malformed receipt locking, automatic immutable official-source digest binding, and 1-argument `freeze_case` regressions without manual snapshot labels.
+- Frontend: 17 passed, including duplicate-provider, non-MetaMask Studionet connection, reload-required reconnection, rollback/error/malformed receipt locking, live `SUCCESS` / `FINISHED_WITH_RETURN` normalization, explicit-failure precedence over conflicting leader success, authoritative create recovery without replay, automatic immutable official-source digest binding, and 1-argument `freeze_case` regressions without manual snapshot labels.
 - Production build: passed with the exact contract address above.
 
 ## Live proof matrix

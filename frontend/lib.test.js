@@ -103,6 +103,11 @@ test("accepts named and numeric FINALIZED successful execution only", () => {
     txExecutionResult: 2,
     consensus_data: { leader_receipt: [{ error: null, result: "2" }] },
   }), /no state change/);
+  assert.throws(() => assertFinalSuccess({
+    status: 7,
+    txExecutionResult: 2,
+    consensus_data: { leader_receipt: [{ mode: "leader", execution_result: "SUCCESS", result: "encoded-return" }] },
+  }), /no state change/);
 });
 
 test("recovers one authoritative created case without guessing from the count", () => {
