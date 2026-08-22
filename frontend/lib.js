@@ -109,6 +109,8 @@ export function assertFinalSuccess(receipt) {
       .filter((value) => value !== undefined && value !== null)
       .map(String)
     : [];
+  const explicitSuccessfulLeader = leaderExecutions.length > 0
+    && leaderExecutions.every((execution) => execution === "SUCCESS");
   const successfulLeader = Array.isArray(leaderReceipts) && leaderReceipts.length > 0 && leaderReceipts.every((leader) => (
     leader && typeof leader === "object"
     && leader.error == null
@@ -121,7 +123,7 @@ export function assertFinalSuccess(receipt) {
     || (leader?.result && typeof leader.result === "object" && leader.result.status !== "return")
   ));
   const failedLeaderExecution = leaderExecutions.some((execution) => execution !== "SUCCESS");
-  if (conflictingLeader || failedLeaderExecution || executions.some((execution) => execution !== SUCCESS_RESULT) || (!executions.length && !successfulLeader)) {
+  if (conflictingLeader || failedLeaderExecution || executions.some((execution) => execution !== SUCCESS_RESULT) || (!executions.length && !successfulLeader && !explicitSuccessfulLeader)) {
     throw new Error(`Leader execution is ${executions.join("/") || leaderExecutions.join("/") || "UNKNOWN"}; no state change is trusted.`);
   }
   return receipt;
