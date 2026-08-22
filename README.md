@@ -4,8 +4,8 @@ An organization-only GenLayer PROJECT that binds a sanctions-screening case to o
 
 ## Verified links
 
-- [Studionet contract](https://explorer-studio.genlayer.com/address/0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26)
-- [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x00e83a6e97e5495f185d67612f3555e5f999e24c7da350c423e4627bacbab926)
+- [Studionet contract](https://explorer-studio.genlayer.com/address/0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA)
+- [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x68a9828d9f1a978ec57e7d8088883033f5b6d0065b920359e697227f653ab2ba)
 - [Live app](https://sanctions-scope-signal.vercel.app)
 
 ## Trust problem
@@ -64,7 +64,7 @@ Before submission, the frontend persists the contract, account, function, and ex
 Prerequisites: Node.js 22+, Python 3.13+, the pinned package dependencies, `genvm-lint`, and its configured GenVM SDK artifact. Install only under your environment policy.
 
 ```powershell
-$env:VITE_CONTRACT_ADDRESS='0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26'
+$env:VITE_CONTRACT_ADDRESS='0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA'
 npm run build
 python -m http.server 4173 --directory dist
 ```
@@ -79,19 +79,19 @@ genvm-lint check contracts\sanctions_scope_signal.py --json
 genvm-lint schema contracts\sanctions_scope_signal.py --json
 py -3.13 -m pytest tests -q --cache-clear
 npm test
-$env:VITE_CONTRACT_ADDRESS='0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26'
+$env:VITE_CONTRACT_ADDRESS='0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA'
 npm run build
 ```
 
-Current release evidence: GenVM semantic/schema checks pass for the unchanged deployed contract; Python `29/29`; frontend `16/16`; production build passes. The frontend regressions cover EIP-6963/legacy deduplication, provider-native Studionet switch/add/readback without MetaMask Snap APIs, disconnected startup on every reload until the user opens the selector, fail-closed receipt-envelope reconciliation, and automatic official publication digest binding. See [verification](docs/VERIFICATION.md).
+Current release evidence: GenVM semantic/schema checks pass for the unchanged deployed contract; Python `29/29`; frontend `16/16`; production build passes. The frontend regressions cover EIP-6963/legacy deduplication, provider-native Studionet switch/add/readback without MetaMask Snap APIs, disconnected startup on every reload until the user opens the selector, fail-closed receipt-envelope reconciliation, automatic official publication digest binding, and zero manual snapshot-label authority. See [verification](docs/VERIFICATION.md).
 
 ## Deployment
 
 - Network: Studionet, chain `61999`
-- Contract: `0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26`
-- Deployment transaction: `0x00e83a6e97e5495f185d67612f3555e5f999e24c7da350c423e4627bacbab926`
+- Contract: `0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA`
+- Deployment transaction: `0x68a9828d9f1a978ec57e7d8088883033f5b6d0065b920359e697227f653ab2ba`
 - Contract source commit: `d7e84586350d6b138816028e64434094ff9c9ea0`
-- Contract SHA-256, normalized LF: `f33a0edb4ba6b4b1f8e3265bad12fa5bb269bfe87d287d72f44647c89a2989da`
+- Contract SHA-256, normalized LF: `7ae251722ac26f2dd86fae4c49d805d5a64db0de6c57b264b1059b27c3153343`
 
 RPC readback matches that source hash. The selected deployer remains the sole recorded upgrader; a separate rehearsal deployment completed an authorized same-source upgrade. See [deployment and recovery](docs/DEPLOYMENT_RECOVERY.md).
 
