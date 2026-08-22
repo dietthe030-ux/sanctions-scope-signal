@@ -97,7 +97,7 @@ export function assertFinalSuccess(receipt) {
     receipt?.tx_execution_result,
   ]
     .filter((value) => value !== undefined && value !== null)
-    .map((value) => value === SUCCESS_RESULT || Number(value) === SUCCESS_RESULT_CODE ? SUCCESS_RESULT : String(value));
+    .map((value) => value === SUCCESS_RESULT || value === "SUCCESS" || Number(value) === SUCCESS_RESULT_CODE ? SUCCESS_RESULT : String(value));
   if (!statuses.length || statuses.some((status) => status !== FINAL_STATUS)) {
     throw new Error(`Transaction stopped at ${statuses.join("/") || "UNKNOWN"}; FINALIZED is required.`);
   }

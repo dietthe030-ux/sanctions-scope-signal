@@ -47,6 +47,7 @@ test("accepts named and numeric FINALIZED successful execution only", () => {
   assert.doesNotThrow(() => assertFinalSuccess({ statusName: "FINALIZED", txExecutionResultName: "FINISHED_WITH_RETURN" }));
   assert.doesNotThrow(() => assertFinalSuccess({ status: 7, txExecutionResult: 1 }));
   assert.doesNotThrow(() => assertFinalSuccess({ status_name: "FINALIZED", tx_execution_result: "1" }));
+  assert.doesNotThrow(() => assertFinalSuccess({ status: "FINALIZED", txExecutionResultName: "SUCCESS" }));
   assert.doesNotThrow(() => assertFinalSuccess({
     status: 7,
     txExecutionResultName: "FINISHED_WITH_RETURN",
