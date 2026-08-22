@@ -4,7 +4,7 @@ An organization-only GenLayer PROJECT that binds a sanctions-screening case to o
 
 ## Verified links
 
-- [Studionet contract](https://explorer-studio.genlayer.com/address/0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA)
+- [Studionet contract](https://explorer-studio.genlayer.com/address/0x01156000d8a28c10AA1EDdD42941cc5b125c208E)
 - [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x68a9828d9f1a978ec57e7d8088883033f5b6d0065b920359e697227f653ab2ba)
 - [Live app](https://sanctions-scope-signal.vercel.app)
 
@@ -64,7 +64,7 @@ Before submission, the frontend persists the contract, account, function, and ex
 Prerequisites: Node.js 22+, Python 3.13+, the pinned package dependencies, `genvm-lint`, and its configured GenVM SDK artifact. Install only under your environment policy.
 
 ```powershell
-$env:VITE_CONTRACT_ADDRESS='0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA'
+$env:VITE_CONTRACT_ADDRESS='0x01156000d8a28c10AA1EDdD42941cc5b125c208E'
 npm run build
 python -m http.server 4173 --directory dist
 ```
@@ -79,7 +79,7 @@ genvm-lint check contracts\sanctions_scope_signal.py --json
 genvm-lint schema contracts\sanctions_scope_signal.py --json
 py -3.13 -m pytest tests -q --cache-clear
 npm test
-$env:VITE_CONTRACT_ADDRESS='0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA'
+$env:VITE_CONTRACT_ADDRESS='0x01156000d8a28c10AA1EDdD42941cc5b125c208E'
 npm run build
 ```
 
@@ -88,7 +88,7 @@ Current release evidence: GenVM semantic/schema checks pass for the unchanged de
 ## Deployment
 
 - Network: Studionet, chain `61999`
-- Contract: `0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA`
+- Contract: `0x01156000d8a28c10AA1EDdD42941cc5b125c208E`
 - Deployment transaction: `0x68a9828d9f1a978ec57e7d8088883033f5b6d0065b920359e697227f653ab2ba`
 - Contract source commit: `d7e84586350d6b138816028e64434094ff9c9ea0`
 - Contract SHA-256, normalized LF: `7ae251722ac26f2dd86fae4c49d805d5a64db0de6c57b264b1059b27c3153343`

@@ -26,9 +26,9 @@ deployment.
 | Classification | `UPGRADABLE` |
 | Linked contracts | none |
 | Configuration transactions | none |
-| Contract address | `0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA` |
+| Contract address | `0x01156000d8a28c10AA1EDdD42941cc5b125c208E` |
 | Deployment transaction | `0x68a9828d9f1a978ec57e7d8088883033f5b6d0065b920359e697227f653ab2ba` |
-| Explorer | `https://explorer-studio.genlayer.com/address/0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA` |
+| Explorer | `https://explorer-studio.genlayer.com/address/0x01156000d8a28c10AA1EDdD42941cc5b125c208E` |
 | Exact source commit | `d7e84586350d6b138816028e64434094ff9c9ea0` |
 | Contract SHA-256, normalized LF | `7ae251722ac26f2dd86fae4c49d805d5a64db0de6c57b264b1059b27c3153343` |
 | Studio deployer/upgrader | `0x2e53bb6ED175A7F827590D9D3a353FC51Eb8996a` |
@@ -39,7 +39,7 @@ deployment.
 | --- | --- |
 | Historical contract address | `0xb83aEC2EB2FE781d383089e3fB9B3F09d2625e26` |
 | Historical deployment transaction | `0x00e83a6e97e5495f185d67612f3555e5f999e24c7da350c423e4627bacbab926` |
-| Note | Superseded by `0x3b562C54bEaeD6A8F58cf6aa63ccda3BB153b8AA` to bind immutable official-source digests automatically and eliminate user snapshot-label authority. |
+| Note | Superseded by `0x01156000d8a28c10AA1EDdD42941cc5b125c208E` to bind immutable official-source digests automatically and eliminate user snapshot-label authority. |
 
 No private key, password, token, seed phrase, or Studio credential belongs in this repository.
 
