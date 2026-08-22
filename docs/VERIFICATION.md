@@ -54,6 +54,7 @@ The primary deployment and all application business writes ran in Normal consens
 | Reject invalid legal name | `0x3abcc5e83eaa32d437a563bac0fee65c370fe52025e78e69140472629eeedda7` | `FINALIZED`; rollback; case count unchanged |
 | Reject post-assessment alias | `0xde0dd1c273382311029281375d20ecc52cada74ebd5c0ecdd52460c708bd9432` | `FINALIZED`; rollback; assessed state unchanged |
 | Create replacement case 2 | `0x538bd4dafbaca113e1f61442683a1b2f72dbebe91e4f19cd55d4356aae7ddccc` | `FINALIZED`; `SUCCESS`; replacement DRAFT |
+| Freeze replacement case 2 | `0x66d54a57d893cf295e25e14dc137a90c34724053e6b9861106cc734c143140fe` | `FINALIZED`; `SUCCESS`; exact bound digest readback |
 | Assess replacement case 2 | `0xc4c61143dd7f15a991f029b0a79fa446c218ffd42189f78fe4e81cd7336463ad` | `FINALIZED`; `SUCCESS`; current `SIGNALLED / NO_SIGNAL` |
 | Supersede case 1 with case 2 | `0x37a3fb893c71437e34e2f75cfe3aa0a0336aa06b42d2d4b969321e50738318f0` | `FINALIZED`; case 1 readback `SUPERSEDED`, `superseded_by=2`; case 2 remains current |
 | Deploy exact-source upgrade rehearsal | `0xe45613dead88f69b3dff979f195e0e0fbd4db020ce777f9ec248a45db851625b` | `FINALIZED`; rehearsal `0xeeC77C03541D0d405b16aeCB29c5043Ae3090aF6` |
