@@ -133,6 +133,7 @@ export function assertFinalSuccess(receipt) {
   if (executions.length && executions.every((execution) => execution === SUCCESS_RESULT)) {
     return receipt;
   }
+  if (explicitSuccessfulLeader) return receipt;
   if (conflictingLeader || failedLeaderExecution || executions.some((execution) => execution !== SUCCESS_RESULT) || (!successfulLeader && !explicitSuccessfulLeader)) {
     throw new Error(`Leader execution is ${executions.join("/") || leaderExecutions.join("/") || "UNKNOWN"}; no state change is trusted.`);
   }
