@@ -8,6 +8,7 @@ for runtime and consensus behavior after PRE_DEPLOY approval.
 
 from contextlib import contextmanager
 import importlib.util
+import html
 from pathlib import Path
 import re
 import sys
@@ -177,7 +178,14 @@ def build_sdk():
             run_nondet_unsafe=vm.run_nondet_unsafe,
         ),
         nondet=types.SimpleNamespace(
-            web=types.SimpleNamespace(get=vm.find_web),
+            web=types.SimpleNamespace(
+                get=vm.find_web,
+                render=lambda url, mode="html", **kwargs: (
+                    "<html><body>"
+                    + html.escape(vm.find_web(url).body.decode("utf-8"))
+                    + "</body></html>"
+                ),
+            ),
             exec_prompt=lambda prompt, response_format=None: vm.find_llm(prompt),
         ),
         storage=types.SimpleNamespace(Root=RootAccessor),

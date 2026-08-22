@@ -77,11 +77,18 @@ def _evidence_windows(normalized_document: str, terms: list[str]) -> list[str]:
 def _is_complete_snapshot(policy: str, body: str) -> bool:
     if policy != "UN_CONSOLIDATED":
         return False
-    upper = body.upper().strip()
+    upper = (
+        body.upper()
+        .strip()
+        .replace("&AMP;LT;", "<")
+        .replace("&AMP;GT;", ">")
+        .replace("&LT;", "<")
+        .replace("&GT;", ">")
+    )
     return (
         len(body) > 500_000
         and "<CONSOLIDATED_LIST" in upper[:2_000]
-        and upper.endswith("</CONSOLIDATED_LIST>")
+        and "</CONSOLIDATED_LIST>" in upper
         and "<INDIVIDUALS>" in upper
         and "<ENTITIES>" in upper
     )
@@ -98,6 +105,19 @@ def _valid_model_result(value: object) -> bool:
         and len(value.get("matched_record", "")) <= 240
         and len(value.get("match_narrative", "")) <= 900
     )
+
+
+def _fetch_source(policy: str, source_url: str):
+    if policy == "UN_CONSOLIDATED":
+        rendered = gl.nondet.web.render(source_url, mode="html")
+        if not isinstance(rendered, str):
+            raise ValueError("Rendered official source was not text")
+        body_bytes = rendered.encode("utf-8")
+        return 200, body_bytes, rendered
+    response = gl.nondet.web.get(source_url)
+    body_bytes = response.body
+    body = body_bytes.decode("utf-8")
+    return response.status_code, body_bytes, body
 
 
 class SanctionsScopeSignal(gl.Contract):
@@ -194,14 +214,12 @@ class SanctionsScopeSignal(gl.Contract):
         if case["stage"] != "DRAFT":
             raise gl.vm.UserError("Only a DRAFT case can be frozen")
 
+        policy = case["source_policy"]
         source_url = case["source_url"]
 
         def fetch_freeze_source() -> str:
             try:
-                response = gl.nondet.web.get(source_url)
-                status_code = response.status_code
-                body_bytes = response.body
-                body = body_bytes.decode("utf-8")
+                status_code, body_bytes, body = _fetch_source(policy, source_url)
             except Exception:
                 return _canonical({
                     "valid": False,
@@ -269,10 +287,7 @@ class SanctionsScopeSignal(gl.Contract):
 
         def evaluate_source() -> str:
             try:
-                response = gl.nondet.web.get(source_url)
-                status_code = response.status_code
-                body_bytes = response.body
-                body = body_bytes.decode("utf-8")
+                status_code, body_bytes, body = _fetch_source(policy, source_url)
             except Exception:
                 return _canonical({
                     "outcome": "UNRESOLVED",
